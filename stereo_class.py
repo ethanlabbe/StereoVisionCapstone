@@ -2,7 +2,7 @@ import cv2
 import numpy as np
 
 class CameraCalibration:
-    def __init__(self, chessboard_size=(4,6), square_size=1.0):
+    def __init__(self, chessboard_size=(7,11), square_size=3):
         """
         Initialize calibration parameters.
         """
@@ -129,12 +129,12 @@ class CameraCalibration:
 
         # Precompute rectification maps
         self.left_map1, self.left_map2 = cv2.initUndistortRectifyMap(
-            self.ML_opt, self.DL, self.RL, self.PL, image_shape, cv2.CV_16SC2
+            self.ML_opt, self.DL, self.RL, self.PL, image_shape, cv2.CV_32FC1
         )
         self.right_map1, self.right_map2 = cv2.initUndistortRectifyMap(
-            self.MR_opt, self.DR, self.RR, self.PR, image_shape, cv2.CV_16SC2
+            self.MR_opt, self.DR, self.RR, self.PR, image_shape, cv2.CV_32FC1
         )
-
+        
         return rmsReprojEstereo, self.Q
 
     def get_rectification_maps(self):
@@ -146,7 +146,7 @@ class CameraCalibration:
 #STEREO COMPUTATION CLASS
 class StereoSystem:
     #Blocksize 7 (must be odd number between 3 and 11)
-    def __init__(self, min_disp=0, num_disp=128, block_size=7, lambda_val=8000, sigma_color=1.4):
+    def __init__(self, min_disp=0, num_disp=16 * 3, block_size=7, lambda_val=8000, sigma_color=1.4):
         self.min_disp = min_disp
         self.num_disp = num_disp
         self.block_size = block_size
@@ -159,7 +159,7 @@ class StereoSystem:
             P1=8*3*self.block_size**2,
             P2=32*3*self.block_size**2,
             uniquenessRatio = 7,
-            speckleWindowSize = 125,
+            speckleWindowSize = 50,
             speckleRange = 1, 
             #Consider MODE_SGBM for less memory consumption
             mode=cv2.STEREO_SGBM_MODE_SGBM_3WAY
@@ -167,7 +167,7 @@ class StereoSystem:
         self.matcher_right = cv2.ximgproc.createRightMatcher(self.matcher_left)
 
         #LRCThresh default is 24 (1.5 px)
-        #Can use .getConfidenceMap() ***Still need to find a way to calculate LRC consistency check median value in px
+        #Can use .getConfidenceMap() 
         #Lambda and SigmaColor values per documentation recommendation
         self.wls_filter = cv2.ximgproc.createDisparityWLSFilter(matcher_left=self.matcher_left)
         self.wls_filter.setLambda(lambda_val)
@@ -179,9 +179,11 @@ class StereoSystem:
         self.right_map2 = None
         self.Q = None
 
-    def set_rectification(self, left_maps, right_maps, Q):
-        self.left_map1, self.left_map2 = left_maps
-        self.right_map1, self.right_map2 = right_maps
+    def set_rectification(self, left_map1, left_map2, right_map1, right_map2, Q):
+        self.left_map1 = left_map1
+        self.left_map2 = left_map2
+        self.right_map1 = right_map1
+        self.right_map2 = right_map2
         self.Q = Q
 
     def rectify_pair(self, imgL, imgR):
@@ -206,10 +208,4 @@ class StereoSystem:
         depth_map = points_3D[:,:,2]
         return depth_map
 
-    def visualize_disparity(self, disparity):
-        disp_vis = cv2.normalize(disparity, None, 0, 255, cv2.NORM_MINMAX)
-        disp_vis = np.uint8(disp_vis)
-        cv2.imshow("Disparity", disp_vis)
-        cv2.waitKey(0)
-        cv2.destroyAllWindows()
 
