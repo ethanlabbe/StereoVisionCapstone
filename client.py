@@ -1,5 +1,6 @@
 from image_transfer import ImageClient
 from stereo_class import CameraCalibration, StereoSystem
+import performance
 import numpy as np
 import cv2
 
@@ -33,10 +34,15 @@ class StereoClientDevice:
             imgR_array = np.frombuffer(imgR,np.uint8)
 
             imgL_cv, imgR_cv = self.calib.decode_img(imgL_array, imgR_array)
+            im_shape = imgL_cv.shape[:2]
+            #ADJUST chessboard_size per calibration image in stereo_class
+            self.calib.add_chessboard_corners(imgL_cv, imgR_cv)
+            rmseL, rmseR, _, _, _, _ = self.calib.calibrate_cameras(im_shape)
+            print(f"{rmseL},{rmseR}")
+            stereorms, _ = self.calib.stereo_calibrate_and_rectify(im_shape)
+            print(f"STEREO = {stereorms}")
 
-            cv2.imshow("Img",imgL_cv)
-            cv2.waitKey(0)
-            cv2.destroyAllWindows()
+
             #TODO process received images
         else:
             print("Client not connected to server, loading local images...")

@@ -2,7 +2,7 @@ import cv2
 import numpy as np
 
 class CameraCalibration:
-    def __init__(self, chessboard_size=(7,7), square_size=1.0):
+    def __init__(self, chessboard_size=(4,6), square_size=1.0):
         """
         Initialize calibration parameters.
         """
@@ -45,27 +45,19 @@ class CameraCalibration:
         self.right_map2 = None
 
     def decode_img(self, img_left, img_right):
+        #Deal with no image read error
+        if img_left is None:
+            raise FileNotFoundError("Left image not loaded")
+        if img_right is None:
+            raise FileNotFoundError("Right image not loaded")
         img_left_cv = cv2.imdecode(img_left, cv2.IMREAD_COLOR)
         img_right_cv = cv2.imdecode(img_right, cv2.IMREAD_COLOR)
         return img_left_cv, img_right_cv
 
     def add_chessboard_corners(self, img_left, img_right, display=False):
-        """
-        Detect and store chessboard corners in left and right images.
-        """
 
-        #CONVERT IMAGES INTO ARRAYS FROM WIRELESS TRANSMISSION
-        img_left_array = cv2.imread(img_left)
-        img_right_array = cv2.imread(img_right)
-
-        #Deal with no image read error
-        if img_left_array is None:
-            raise FileNotFoundError("Left image not loaded")
-        if img_right_array is None:
-            raise FileNotFoundError("Right image not loaded")
-
-        gray_left = cv2.cvtColor(img_left_array, cv2.COLOR_BGR2GRAY)
-        gray_right = cv2.cvtColor(img_right_array, cv2.COLOR_BGR2GRAY)
+        gray_left = cv2.cvtColor(img_left, cv2.COLOR_BGR2GRAY)
+        gray_right = cv2.cvtColor(img_right, cv2.COLOR_BGR2GRAY)
 
         ret_left, corners_left = cv2.findChessboardCorners(gray_left, self.chessboard_size, None)
         ret_right, corners_right = cv2.findChessboardCorners(gray_right, self.chessboard_size, None)
@@ -96,17 +88,18 @@ class CameraCalibration:
         alpha: free scaling parameter (0 = crop, 1 = keep all pixels)
         """
         # Left camera
-        rmsE1, self.ML, self.DL, rvecsL, tvecsL = cv2.calibrateCamera(
+        rmsE1cam, self.ML, self.DL, rvecsL, tvecsL = cv2.calibrateCamera(
             self.objpoints, self.imgpoints_left, image_shape, None, None
         )
         self.ML_opt, _ = cv2.getOptimalNewCameraMatrix(self.ML, self.DL, image_shape, alpha, image_shape)
 
         # Right camera
-        rmsE2, self.MR, self.DR, rvecsR, tvecsR = cv2.calibrateCamera(
+        rmsE2cam, self.MR, self.DR, rvecsR, tvecsR = cv2.calibrateCamera(
             self.objpoints, self.imgpoints_right, image_shape, None, None
         )
         self.MR_opt, _ = cv2.getOptimalNewCameraMatrix(self.MR, self.DR, image_shape, alpha, image_shape)
 
+        #RMS reprojection error returned in px
         return rmsE1cam, rmsE2cam, rvecsR, rvecsL, tvecsR, tvecsL
 
     def stereo_calibrate_and_rectify(self, image_shape):
@@ -171,14 +164,14 @@ class StereoSystem:
             #Consider MODE_SGBM for less memory consumption
             mode=cv2.STEREO_SGBM_MODE_SGBM_3WAY
         )
-        #self.matcher_right = cv2.ximgproc.createRightMatcher(self.matcher_left)
+        self.matcher_right = cv2.ximgproc.createRightMatcher(self.matcher_left)
 
         #LRCThresh default is 24 (1.5 px)
         #Can use .getConfidenceMap() ***Still need to find a way to calculate LRC consistency check median value in px
         #Lambda and SigmaColor values per documentation recommendation
-        """self.wls_filter = cv2.ximgproc.createDisparityWLSFilter(matcher_left=self.matcher_left)
+        self.wls_filter = cv2.ximgproc.createDisparityWLSFilter(matcher_left=self.matcher_left)
         self.wls_filter.setLambda(lambda_val)
-        self.wls_filter.setSigmaColor(sigma_color)"""
+        self.wls_filter.setSigmaColor(sigma_color)
 
         self.left_map1 = None
         self.left_map2 = None
@@ -197,12 +190,14 @@ class StereoSystem:
         return imgL_rect, imgR_rect
 
     def compute_disparity(self, imgL, imgR):
-        dispL = self.matcher_left.compute(imgL, imgR).astype(np.float32) / 16.0
+        dispL = self.matcher_left.compute(imgL, imgR).astype(np.float32) 
 
-        dispR = self.matcher_right.compute(imgR, imgL).astype(np.float32) / 16.0
+        dispR = self.matcher_right.compute(imgR, imgL).astype(np.float32) 
 
-        #dispL_filtered = self.wls_filter.filter(dispL, imgL, None, dispR)
-        return "dispL_filtered", dispL, dispR
+        dispL_filtered = self.wls_filter.filter(dispL, imgL, None, dispR) / 16.0
+        dispR = dispR / 16.0
+        dispL = dispL / 16.0
+        return dispL_filtered, dispL, dispR
 
     def disparity_to_depth(self, disparity):
         if self.Q is None:
