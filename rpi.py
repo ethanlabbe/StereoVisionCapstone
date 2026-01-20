@@ -1,6 +1,11 @@
 from image_transfer import ImageServerHost
 from acquisition import StereoCameraAcquisition
 
+#ui imports
+import sys
+from PySide6.QtWidgets import QApplication, QMainWindow, QPushButton, QVBoxLayout, QWidget
+from PySide6.QtCore import Qt
+ 
 
 class RaspberryPiStereoSystem:
     def __init__(self):
@@ -16,6 +21,54 @@ class RaspberryPiStereoSystem:
         with open(right_filename, 'wb') as fR:
             fR.write(right_bytes)
         print(f"Images saved locally: {left_filename}, {right_filename}")
+
+    def rpi_UI_start():
+        
+        app = QApplication(sys.argv)
+        rpiUI= QMainWindow()
+        rpiUI.setWindowTitle("Stereo Vision Capstone")
+        rpiUI.setGeometry(100, 100, 600, 400)
+
+
+
+        #buttons initalize
+        button1 = QPushButton(text="1",parent=rpiUI)
+        button1.clicked.connect("Fuction 1")
+
+        button2 = QPushButton(text="2",parent=rpiUI)
+        button2.clicked.connect("Fuction 2")
+
+        button3 = QPushButton(text="3",parent=rpiUI)
+        button3.clicked.connect("Fuction 3")
+
+        button4 = QPushButton(text="4",parent=rpiUI)
+        button4.clicked.connect("Fuction 4")
+
+
+        #creating the stacked layout
+        layout=QVBoxLayout()
+        layout.addWidget(button1)
+        layout.addWidget(button2)
+        layout.addWidget(button3)
+        layout.addWidget(button4)
+        layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+        #setting the button size
+        buttonheight=120
+        buttonwidth=480
+
+        widget = QWidget()
+        widget.setLayout(layout)
+        button1.setFixedSize(buttonwidth,buttonheight)
+        button2.setFixedSize(buttonwidth,buttonheight)
+        button3.setFixedSize(buttonwidth,buttonheight)
+        button4.setFixedSize(buttonwidth,buttonheight)
+        rpiUI.setCentralWidget(widget)
+
+        #show UI        
+        rpiUI.show()
+        app.exec()
+
 
     def run(self):
         self.running = True
