@@ -12,11 +12,8 @@ class StereoCameraAcquisition:
         self.framerate = frame_rate
         self.ctrls = {"FrameRate": self.framerate,}
 
-        self.left_config_still = self.left_camera.create_still_configuration(main={"size": (4056, 3040)}, controls={**self.ctrls, 'SyncMode': controls.rpi.SyncModeEnum.Server})
-        self.right_config_still = self.right_camera.create_still_configuration(main={"size": (4056, 3040)}, controls={**self.ctrls, 'SyncMode': controls.rpi.SyncModeEnum.Client})
-        
-        self.left_config_preview = self.left_camera.create_preview_configuration(lores={"size": (4056, 3040), "format": "YUV420",}, controls={**self.ctrls, 'SyncMode': controls.rpi.SyncModeEnum.Server})
-        self.right_config_preview = self.right_camera.create_preview_configuration(lores={"size": (4056, 3040), "format": "YUV420"}, controls={**self.ctrls, 'SyncMode': controls.rpi.SyncModeEnum.Client})
+        self.left_config = self.left_camera.create_preview_configuration(main={"size": (4056, 3040)}, lores={"size":(1024, 600)}, controls={**self.ctrls, 'SyncMode': controls.rpi.SyncModeEnum.Server})
+        self.right_config = self.right_camera.create_preview_configuration(main={"size": (4056, 3040)}, controls={**self.ctrls, 'SyncMode': controls.rpi.SyncModeEnum.Client})
 
     def configure_cameras(self, configL, configR):
         self.left_camera.configure(configL)
@@ -29,7 +26,7 @@ class StereoCameraAcquisition:
         
     def initialize_cameras(self):
         self.stop()
-        self.configure_cameras(self.left_config_preview, self.right_config_preview)
+        self.configure_cameras(self.left_config, self.right_config)
 
     def capture_stereo_image(self):
         reqL = self.left_camera.capture_sync_request()
@@ -43,21 +40,15 @@ class StereoCameraAcquisition:
         
         return frameL, frameR
         
-    def display_preview(self):
-        self.left_camera.start_preview(Preview.QTGL, x=int(1024*2/3), y=int(1024*1/3), width=int(1024*2/3), height=int(1024*1/3),transform=Transform(vflip=1))
-        self.right_camera.start_preview(Preview.QTGL, x=int(1024*2/3), y=int(1024*1/3), width=int(1024*2/3), height=int(1024*1/3),transform=Transform(vflip=1))
+    def display_preview(self, width=1024, height=600):
+        self.left_camera.start_preview(Preview.QTGL, x=int(0), y=int(0), width=int(width), height=int(height), transform=Transform(vflip=0))
         self.start()
         
-    def stop_preview(self):
+    def stop(self):
         self.left_camera.stop_preview()
         self.right_camera.stop_preview()
         self.left_camera.stop()
         self.right_camera.stop()
-        
-    def stop(self):
-        self.left_camera.stop()
-        self.right_camera.stop()
-        time.sleep(2)
         
     
 
@@ -70,7 +61,7 @@ if __name__ == "__main__":
     while running:
         response = input("Press Enter to capture images or 'exit' to quit: ")
         if response == 'exit':
-            stereo_system.stop_preview()
+            stereo_system.stop()
             running = False
         else:
             frameL, frameR = stereo_system.capture_stereo_image()
