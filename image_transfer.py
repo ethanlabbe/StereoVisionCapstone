@@ -220,7 +220,7 @@ class ImageClient:
 if __name__ == "__main__":
     user_input = input("Start as server (s) or client (c)? ")
     if user_input.lower() == 'c':
-        client = ImageClient()
+        client = ImageClient(server_host='192.168.1.92', server_port=8080, save_images=True)
         client.connect()
         try:
             while True:
