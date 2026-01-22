@@ -18,11 +18,11 @@ class RaspberryPiStereoSystem:
 
     def save_images_locally(self, left_image, right_image, left_filename="left_image.jpg", right_filename="right_image.jpg"):
         cv2.imwrite(left_filename, cv2.cvtColor(left_image, cv2.COLOR_RGB2BGR))
-        cv2.imwrite(right_filename, cv2.cvtColor(right_image, cv2.COLOR_RGB2))
+        cv2.imwrite(right_filename, cv2.cvtColor(right_image, cv2.COLOR_RGB2BGR))
         print(f"Images saved locally: {left_filename}, {right_filename}")
     def UI_start(self):
         
-        app = QApplication(sys.argv)
+        self.app = QApplication(sys.argv)
         rpiUI= QMainWindow()
         rpiUI.setWindowTitle("Stereo Vision Capstone")
         rpiUI.setGeometry(100, 100, 600, 400)
@@ -35,8 +35,8 @@ class RaspberryPiStereoSystem:
         button2 = QPushButton(text="Quit",parent=rpiUI)
         button2.clicked.connect(self.quiting)
 
-        button3 = QPushButton(text="3",parent=rpiUI)
-        button3.clicked.connect("Fuction 3")
+        button3 = QPushButton(text="Start Server and Cameras",parent=rpiUI)
+        button3.clicked.connect(self.run)
 
         button4 = QPushButton(text="4",parent=rpiUI)
         button4.clicked.connect("Fuction 4")
@@ -64,10 +64,14 @@ class RaspberryPiStereoSystem:
 
         #show UI        
         rpiUI.show()
-        app.exec()
+        self.app.exec()
 
 
     def image_capture(self):
+        capture_thread = threading.Thread(target=self._do_capture)
+        capture_thread.start()
+
+    def _do_capture(self):
         imgL, imgR = self.stereo_system.capture_stereo_image()
 
         if self.server.connected:
@@ -82,19 +86,19 @@ class RaspberryPiStereoSystem:
 
     def quiting(self):
         self.running = False
-        self.stereo_system.stop_preview()
+        self.stereo_system.stop()
         self.server.stop_server()
-        quit()
+        self.app.quit()
 
     def run(self):
         
         self.running = True
         self.stereo_system.initialize_cameras()
-        # start server in background (non-blocking)
         self.server.start_server()
-        preview_thread = threading.Thread(target=self.stereo_system.display_preview)
-        preview_thread.daemon = True
-        preview_thread.start()
+        # start preview in background
+        self.preview_thread = threading.Thread(target=self.stereo_system.display_preview)
+        self.preview_thread.daemon = True
+        self.preview_thread.start()
 
             
 
@@ -102,5 +106,4 @@ class RaspberryPiStereoSystem:
     
 if __name__ == "__main__":
     rpi = RaspberryPiStereoSystem()
-    rpi.run()
     rpi.UI_start()
