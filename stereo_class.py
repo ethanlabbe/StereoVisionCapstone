@@ -2,7 +2,7 @@ import cv2
 import numpy as np
 
 class CameraCalibration:
-    def __init__(self, chessboard_size=(7,11), square_size=3):
+    def __init__(self, chessboard_size=(7,7), square_size=0.02):
         """
         Initialize calibration parameters.
         """
@@ -59,8 +59,8 @@ class CameraCalibration:
         gray_left = cv2.cvtColor(img_left, cv2.COLOR_BGR2GRAY)
         gray_right = cv2.cvtColor(img_right, cv2.COLOR_BGR2GRAY)
 
-        ret_left, corners_left = cv2.findChessboardCorners(gray_left, self.chessboard_size, None)
-        ret_right, corners_right = cv2.findChessboardCorners(gray_right, self.chessboard_size, None)
+        ret_left, corners_left = cv2.findChessboardCornersSB(gray_left, self.chessboard_size, None)
+        ret_right, corners_right = cv2.findChessboardCornersSB(gray_right, self.chessboard_size, None)
 
         if ret_left and ret_right:
             self.objpoints.append(self.objp)
@@ -146,7 +146,7 @@ class CameraCalibration:
 #STEREO COMPUTATION CLASS
 class StereoSystem:
     #Blocksize 7 (must be odd number between 3 and 11)
-    def __init__(self, min_disp=0, num_disp=16 * 3, block_size=7, lambda_val=8000, sigma_color=1.4):
+    def __init__(self, min_disp=0, num_disp=16 * 8, block_size=7, lambda_val=8000, sigma_color=1.4):
         self.min_disp = min_disp
         self.num_disp = num_disp
         self.block_size = block_size
@@ -159,12 +159,14 @@ class StereoSystem:
             P1=8*3*self.block_size**2,
             P2=32*3*self.block_size**2,
             uniquenessRatio = 7,
-            speckleWindowSize = 50,
-            speckleRange = 1, 
+            speckleWindowSize = 50, #Was 50
+            speckleRange = 1, #Was 1
             #Consider MODE_SGBM for less memory consumption
             mode=cv2.STEREO_SGBM_MODE_SGBM_3WAY
         )
+
         self.matcher_right = cv2.ximgproc.createRightMatcher(self.matcher_left)
+
 
         #LRCThresh default is 24 (1.5 px)
         #Can use .getConfidenceMap() 
@@ -193,7 +195,6 @@ class StereoSystem:
 
     def compute_disparity(self, imgL, imgR):
         dispL = self.matcher_left.compute(imgL, imgR).astype(np.float32) 
-
         dispR = self.matcher_right.compute(imgR, imgL).astype(np.float32) 
 
         dispL_filtered = self.wls_filter.filter(dispL, imgL, None, dispR) / 16.0
