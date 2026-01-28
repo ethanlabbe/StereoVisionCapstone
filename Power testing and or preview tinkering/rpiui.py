@@ -5,8 +5,12 @@ import threading
 
 #ui imports
 import sys
-from PySide6.QtWidgets import QApplication, QMainWindow, QPushButton, QVBoxLayout, QWidget
-from PySide6.QtCore import Qt
+from PyQt5.QtWidgets import QApplication, QMainWindow, QPushButton, QGridLayout, QWidget, QLabel
+from PyQt5.QtCore import Qt
+from picamera2.previews.qt import QGlPicamera2
+from picamera2 import Picamera2
+
+
 
 class RaspberryPiStereoSystem:
     def __init__(self):
@@ -21,13 +25,16 @@ class RaspberryPiStereoSystem:
         cv2.imwrite(right_filename, cv2.cvtColor(right_image, cv2.COLOR_RGB2BGR))
         print(f"Images saved locally: {left_filename}, {right_filename}")
     def UI_start(self):
-        
+
+
         self.app = QApplication(sys.argv)
         rpiUI= QMainWindow()
         rpiUI.setWindowTitle("Stereo Vision Capstone")
-        rpiUI.setGeometry(100, 100, 600, 400)
-
-
+        rpiUI.setGeometry(100, 100, 1200, 600)
+        qpicamera2 = QGlPicamera2(self.stereo_system.left_camera, width=800, height=600, keep_ar=False)
+        
+        #needs to start after the qpicamera2 is made but before window is shown
+        self.stereo_system.left_camera.start()
         #buttons initalize
         button1 = QPushButton(text="Capture",parent=rpiUI)
         button1.clicked.connect(self.image_capture)
@@ -39,17 +46,18 @@ class RaspberryPiStereoSystem:
         button3.clicked.connect(self.run)
 
         button4 = QPushButton(text="4",parent=rpiUI)
-        button4.clicked.connect("Fuction 4")
+        button4.clicked.connect(lambda : print(":)"))
 
 
         #creating the stacked layout
-        layout=QVBoxLayout()
-        layout.addWidget(button1)
-        layout.addWidget(button2)
-        layout.addWidget(button3)
-        layout.addWidget(button4)
-        layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
-
+        layout=QGridLayout()
+        layout.addWidget(button1,0,2)
+        layout.addWidget(button2,1,2)
+        layout.addWidget(button3,2,2)
+        layout.addWidget(button4,3,2)
+        layout.addWidget(qpicamera2,0,0,3,1) 
+            
+        
         #setting the button size
         buttonheight=120
         buttonwidth=480
@@ -96,9 +104,11 @@ class RaspberryPiStereoSystem:
         self.stereo_system.initialize_cameras()
         self.server.start_server()
         # start preview in background
+        """
         self.preview_thread = threading.Thread(target=self.stereo_system.display_preview)
         self.preview_thread.daemon = True
         self.preview_thread.start()
+        """
 
             
 

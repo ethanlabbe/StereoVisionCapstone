@@ -1,4 +1,5 @@
 import sys
+from picamera2 import Picamera2, Preview
 from PySide6.QtWidgets import QApplication, QMainWindow, QPushButton, QVBoxLayout, QWidget
 from PySide6.QtCore import Qt
 
@@ -44,8 +45,8 @@ class MainWindow(QMainWindow):
         
 
     def button1click(self):
-        #first button code
-        print("hi1")
+        picam2 = Picamera2()
+        picam2.start_preview(Preview.QTGL)
 
     def button2click(self):
         #second button code
