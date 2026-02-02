@@ -2,7 +2,7 @@ import cv2
 import numpy as np
 
 class CameraCalibration:
-    def __init__(self, chessboard_size=(7,7), square_size=0.02):
+    def __init__(self, chessboard_size=(14,9), square_size=0.0181):
         """
         Initialize calibration parameters.
         """
@@ -54,15 +54,23 @@ class CameraCalibration:
         img_right_cv = cv2.imdecode(img_right, cv2.IMREAD_COLOR)
         return img_left_cv, img_right_cv
 
-    def add_chessboard_corners(self, img_left, img_right, display=False):
+    def add_chessboard_corners(self, img_left, img_right, scale, display=False):
+
+        h, w = img_left.shape[:2]
 
         gray_left = cv2.cvtColor(img_left, cv2.COLOR_BGR2GRAY)
         gray_right = cv2.cvtColor(img_right, cv2.COLOR_BGR2GRAY)
 
-        ret_left, corners_left = cv2.findChessboardCornersSB(gray_left, self.chessboard_size, None)
-        ret_right, corners_right = cv2.findChessboardCornersSB(gray_right, self.chessboard_size, None)
+        resized_gray_left = cv2.resize(gray_left, (int(w / scale), int(h / scale)))
+        resized_gray_right = cv2.resize(gray_right, (int(w / scale), int(h / scale)))
+
+        ret_left, corners_left = cv2.findChessboardCornersSB(resized_gray_left, self.chessboard_size, None)
+        ret_right, corners_right = cv2.findChessboardCornersSB(resized_gray_right, self.chessboard_size, None)
 
         if ret_left and ret_right:
+            corners_left *= scale
+            corners_right *=  scale
+
             self.objpoints.append(self.objp)
 
             # Subpixel refinement
@@ -78,9 +86,14 @@ class CameraCalibration:
                 cv2.drawChessboardCorners(img_right, self.chessboard_size, corners_right, ret_right)
                 cv2.imshow("Left Corners", img_left)
                 cv2.imshow("Right Corners", img_right)
-                cv2.waitKey(500)
+                cv2.waitKey(0)
+                cv2.destroyAllWindows
         else:
             print("Chessboard not found in one or both images.")
+            cv2.imshow("Left Error", img_left)
+            cv2.imshow("Right Error", img_right)
+            cv2.waitKey(2000)
+            cv2.destroyAllWindows
 
     def calibrate_cameras(self, image_shape, alpha=0.0):
         """
@@ -146,7 +159,7 @@ class CameraCalibration:
 #STEREO COMPUTATION CLASS
 class StereoSystem:
     #Blocksize 7 (must be odd number between 3 and 11)
-    def __init__(self, min_disp=0, num_disp=16 * 8, block_size=7, lambda_val=8000, sigma_color=1.4):
+    def __init__(self, min_disp=0, num_disp=16 * 8, block_size=15, lambda_val=8000, sigma_color=1.4):
         self.min_disp = min_disp
         self.num_disp = num_disp
         self.block_size = block_size
@@ -206,7 +219,31 @@ class StereoSystem:
         if self.Q is None:
             raise ValueError("Reprojection matrix Q not set.")
         points_3D = cv2.reprojectImageTo3D(disparity, self.Q)
-        depth_map = points_3D[:,:,2]
-        return depth_map
+        depth = points_3D[:,:,2]
+
+
+        return depth
+    
+    def image_display(self, array):
+        #Use PLT not CV2
+        cv2.imshow("Image", array)            
+        cv2.waitKey(0)
+        cv2.destroyAllWindows()
+
+    def save_stereo_rectification(Q, left_map1, left_map2, right_map1, right_map2, filename):
+        np.savez(
+            filename,
+            Q=Q,
+            left_map1=left_map1,
+            left_map2=left_map2,
+            right_map1=right_map1,
+            right_map2=right_map2
+        )
+
+    def load_stereo_rectification(filename):
+        data = np.load(filename)
+        return data["Q"], data["left_map1"], data["left_map2"],data["right_map1"], data["right_map2"]
+
+
 
 

@@ -1,4 +1,5 @@
 import numpy as np
+import cv2
 
 def depth_rmse(predicted_depth, ground_truth_depth_value):
     #Compute RMSE for a depth map against a flat wall of known distance
@@ -30,9 +31,6 @@ def spatial_noise(depth_map, ignore_zeros=True):
     spatial_noise = np.std(valid_depths)
     
     return spatial_noise
-
-import numpy as np
-import cv2
 
 def median_lr_consistency_error(disp_left, disp_right, ignore_zeros=True):
     #Calculate the median left-right consistency error for stereo disparity maps.

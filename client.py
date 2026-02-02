@@ -40,19 +40,17 @@ class StereoClientDevice:
             imgL_cv, imgR_cv = self.calib.decode_img(imgL_array, imgR_array)"""
 
 
-            left_images  = sorted(glob.glob("C:\\Users\\15877\\OneDrive\\Documents\\GitHub\\StereoVisionCapstone\\Calibration_Images\\3cm\\left_image*.png"))
-            right_images = sorted(glob.glob("C:\\Users\\15877\\OneDrive\\Documents\\GitHub\\StereoVisionCapstone\\Calibration_Images\\3cm\\right_image*.png"))
+            right_images  = sorted(glob.glob("C:\\Users\\15877\\OneDrive\\Documents\\GitHub\\StereoVisionCapstone\\data\\imgs\\288cm_new_actual\\left_image*.png"))
+            left_images = sorted(glob.glob("C:\\Users\\15877\\OneDrive\\Documents\\GitHub\\StereoVisionCapstone\\data\\imgs\\288cm_new_actual\\right_image*.png"))
 
             #Add chessboard corners
             valid_pairs = 0
-            scale = 4
+            scale = 4.75
             for l_path, r_path in zip(left_images, right_images):
-                
                 imgL = cv2.imread(l_path)
                 imgR = cv2.imread(r_path)
 
                 h, w = imgL.shape[:2]
-
 
                 resized_imgL = cv2.resize(imgL, (int(w / scale), int(h / scale)))
                 resized_imgR = cv2.resize(imgR, (int(w / scale), int(h / scale)))
@@ -61,7 +59,7 @@ class StereoClientDevice:
                     continue
 
                 # Only adds if corners are found
-                self.calib.add_chessboard_corners(resized_imgL, resized_imgR)
+                self.calib.add_chessboard_corners(resized_imgL, resized_imgR, 1)
                 valid_pairs += 1
 
             if valid_pairs == 0:
@@ -70,8 +68,8 @@ class StereoClientDevice:
             print(f"Found {valid_pairs} valid stereo pairs.")
 
             #Use the first image to get image shape
-            sample_imgL = cv2.imread(left_images[0])
-            sample_imgR = cv2.imread(right_images[0])
+            sample_imgR = cv2.imread("C:\\Users\\15877\\OneDrive\\Documents\\GitHub\\StereoVisionCapstone\\data\\depth_img\\288cm_new_actual\\left_image_20260202_205211.png")
+            sample_imgL = cv2.imread("C:\\Users\\15877\\OneDrive\\Documents\\GitHub\\StereoVisionCapstone\\data\\depth_img\\288cm_new_actual\\right_image_20260202_205211.png")
 
 
             image_shape = (w, h)  #Switch since OpenCV uses width then height
@@ -112,24 +110,23 @@ class StereoClientDevice:
             dispL_filtered, dispL, dispR = self.stereo.compute_disparity(imgL_gray, imgR_gray)
             print("Disparity range:", np.nanmin(dispL_filtered), np.nanmax(dispL_filtered))
             print("raw dispL min/max:", np.min(dispL_filtered), np.max(dispL_filtered))
-            #visR = (dispR - np.min(dispR)) / (np.max(dispR) - np.min(dispR) + 1e-6)
+            visR = (dispR - np.min(dispR)) / (np.max(dispR) - np.min(dispR) + 1e-6)
             #cv2.imshow("dispR", visR)
-            cv2.imshow("dispL filtered", (dispL_filtered - self.stereo.min_disp) / self.stereo.num_disp)  # quick normalization
-            cv2.waitKey(0)
-            cv2.destroyAllWindows
+            cv2.imshow("dispL filtered", (dispL_filtered - self.stereo.min_disp) / self.stereo.num_disp)  # quick normalization            cv2.waitKey(0)
+            #cv2.destroyAllWindows
 
             disp = dispL_filtered.copy()
-            disp[disp <= 1.0] = np.nan
+            disp[disp <= 0.000000001] = np.nan
 
             depth = self.stereo.disparity_to_depth(disp)
-            depth = -depth
+            #depth = -depth
 
             depth[~np.isfinite(depth)] = np.nan
 
             print(f"{dispL_filtered}")
             print(f"{depth}")
             plt.figure(figsize=(10, 6))
-            im = plt.imshow(depth, cmap='plasma', vmin=0.01, vmax=10)
+            im = plt.imshow(depth, cmap='YlOrRd', vmin=0.01, vmax=1.2)
             plt.colorbar(im, label='Depth (meters)')
             plt.title('Depth Map from Disparity')
             plt.axis('off')
