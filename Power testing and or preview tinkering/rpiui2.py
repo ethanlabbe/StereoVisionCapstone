@@ -1,6 +1,6 @@
 import os
 from image_transfer import ImageServerHost
-from acquisition import StereoCameraAcquisition
+from acquisitionui import StereoCameraAcquisition
 import cv2
 import datetime
 import threading
