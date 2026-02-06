@@ -52,7 +52,6 @@ class StereoCameraAcquisition:
         
     
 
-
 if __name__ == "__main__":
     stereo_system = StereoCameraAcquisition()
     running = True
