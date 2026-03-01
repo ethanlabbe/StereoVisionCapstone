@@ -76,7 +76,7 @@ class StereoCameraAcquisition:
         return None
 
     def _ns_to_iso(self, ts_ns):
-        return datetime.datetime.fromtimestamp(ts_ns / 1e9).strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]
+        return datetime.datetime.fromtimestamp(ts_ns / 1e9).strftime('%H:%M:%S.%f')[:-3]
 
     def _overlay_timestamp(self, frame, ts_ns, position=(10, 30), color=(0, 255, 255), scale=1.0, thickness=2):
         """Overlay a timestamp (given in ns) on an RGB frame and return BGR image."""
@@ -110,7 +110,7 @@ if __name__ == "__main__":
 
             # choose a file timestamp based on the earlier exposure to group files
             group_ts_ns = min(tsL, tsR)
-            file_ts = datetime.datetime.fromtimestamp(group_ts_ns / 1e9).strftime("%Y%m%d_%H%M%S_%f")[:-3]
+            file_ts = datetime.datetime.fromtimestamp(group_ts_ns / 1e9).strftime("%H%M%S_%f")[:-3]
 
             left_bgr = stereo_system._overlay_timestamp(frameL, tsL)
             right_bgr = stereo_system._overlay_timestamp(frameR, tsR)
