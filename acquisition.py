@@ -3,6 +3,9 @@ from picamera2.encoders import H264Encoder
 from libcamera import controls, Transform
 import cv2
 import time
+import datetime
+import json
+import os
 
 class StereoCameraAcquisition:
     def __init__(self, left_camera_id=0, right_camera_id=1, frame_rate=30):
@@ -29,16 +32,58 @@ class StereoCameraAcquisition:
         self.configure_cameras(self.left_config, self.right_config)
 
     def capture_stereo_image(self):
+        # capture requests and attempt to record precise timestamps
         reqL = self.left_camera.capture_sync_request()
+        # timestamp immediately after request returned (ns)
+        tsL_meta = self._request_timestamp_ns(reqL)
+        if tsL_meta is None:
+            tsL_meta = time.time_ns()
+
         reqR = self.right_camera.capture_sync_request()
-        
+        tsR_meta = self._request_timestamp_ns(reqR)
+        if tsR_meta is None:
+            tsR_meta = time.time_ns()
+
         frameL = reqL.make_array("main")
         frameR = reqR.make_array("main")
-        
+
         reqL.release()
         reqR.release()
-        
-        return frameL, frameR
+
+        return (frameL, tsL_meta), (frameR, tsR_meta)
+
+    def _request_timestamp_ns(self, req):
+        """Try to extract a high-resolution timestamp (ns) from a request's metadata.
+        Returns integer nanoseconds or None if unavailable.
+        """
+        try:
+            # Picamera2/libcamera may expose metadata via get_metadata()
+            meta = None
+            if hasattr(req, 'get_metadata'):
+                meta = req.get_metadata()
+            elif hasattr(req, 'metadata'):
+                meta = req.metadata
+            if isinstance(meta, dict):
+                # Common keys that might contain timestamps
+                for k in ('SensorTimestamp', 'Timestamp', 'sensor_timestamp', 'timestamp'):
+                    if k in meta and meta[k] is not None:
+                        try:
+                            return int(meta[k])
+                        except Exception:
+                            pass
+        except Exception:
+            pass
+        return None
+
+    def _ns_to_iso(self, ts_ns):
+        return datetime.datetime.fromtimestamp(ts_ns / 1e9).strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]
+
+    def _overlay_timestamp(self, frame, ts_ns, position=(10, 30), color=(0, 255, 255), scale=1.0, thickness=2):
+        """Overlay a timestamp (given in ns) on an RGB frame and return BGR image."""
+        ts_str = self._ns_to_iso(ts_ns)
+        bgr = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
+        cv2.putText(bgr, ts_str, position, cv2.FONT_HERSHEY_SIMPLEX, scale, color, thickness, cv2.LINE_AA)
+        return bgr
         
     def display_preview(self, width=1024, height=600):
         self.left_camera.start_preview(Preview.QTGL, x=int(0), y=int(0), width=int(width), height=int(height), transform=Transform(vflip=0))
@@ -61,8 +106,37 @@ if __name__ == "__main__":
             stereo_system.stop()
             running = False
         else:
-            frameL, frameR = stereo_system.capture_stereo_image()
-            cv2.imwrite("left.jpg", cv2.cvtColor(frameL, cv2.COLOR_RGB2BGR))
-            cv2.imwrite("right.jpg", cv2.cvtColor(frameR, cv2.COLOR_RGB2BGR))
+            (frameL, tsL), (frameR, tsR) = stereo_system.capture_stereo_image()
+
+            # choose a file timestamp based on the earlier exposure to group files
+            group_ts_ns = min(tsL, tsR)
+            file_ts = datetime.datetime.fromtimestamp(group_ts_ns / 1e9).strftime("%Y%m%d_%H%M%S_%f")[:-3]
+
+            left_bgr = stereo_system._overlay_timestamp(frameL, tsL)
+            right_bgr = stereo_system._overlay_timestamp(frameR, tsR)
+
+            left_filename = f"left_{file_ts}.jpg"
+            right_filename = f"right_{file_ts}.jpg"
+
+            cv2.imwrite(left_filename, left_bgr)
+            cv2.imwrite(right_filename, right_bgr)
+
+            # save a JSON sidecar with precise timestamps (ns and ISO) and delta
+            meta = {
+                "left": {
+                    "filename": left_filename,
+                    "ts_ns": int(tsL),
+                    "ts_iso": stereo_system._ns_to_iso(tsL)
+                },
+                "right": {
+                    "filename": right_filename,
+                    "ts_ns": int(tsR),
+                    "ts_iso": stereo_system._ns_to_iso(tsR)
+                },
+                "delta_ms": (int(tsR) - int(tsL)) / 1e6
+            }
+            meta_filename = f"metadata_{file_ts}.json"
+            with open(meta_filename, 'w') as jf:
+                json.dump(meta, jf, indent=2)
 
 
