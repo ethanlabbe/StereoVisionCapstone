@@ -15,7 +15,7 @@ class RaspberryPiStereoSystem:
         self.running = False
 
         # bind to a local IP address reachable on your network
-        self.server = ImageServerHost(host='192.168.1.100', port=8080)
+        self.server = ImageServerHost(host='10.42.0.1', port=8080)
         self.stereo_system = StereoCameraAcquisition()
 
     def save_images_locally(self, left_image, right_image, left_filename="left_image.jpg", right_filename="right_image.jpg", folder="rpi/desktop/images"):
