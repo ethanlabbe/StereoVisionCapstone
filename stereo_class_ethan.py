@@ -49,8 +49,6 @@ class StereoSystem:
         else:
             return False, None, False, None
     
-        
-    
     
     def calibrate_stereo_system(self):
         flags = cv2.CALIB_FIX_INTRINSIC
@@ -76,14 +74,22 @@ class StereoSystem:
             self.mtxR, self.distR, self.R2, self.P2, self.calib_size, cv2.CV_16SC2)
         return self.rect_mapL1, self.rect_mapL2, self.rect_mapR1, self.rect_mapR2, self.Q
     
-    def save_calibration_parameters(self, filename):
-        np.savez(filename,
-                 mtxL=self.mtxL, distL=self.distL,
-                 mtxR=self.mtxR, distR=self.distR,
-                 R=self.R, T=self.T,
-                 rect_mapL1=self.rect_mapL1, rect_mapL2=self.rect_mapL2,
-                 rect_mapR1=self.rect_mapR1, rect_mapR2=self.rect_mapR2,
-                 Q=self.Q)
+    def save_calibration_parameters(self, filename, include_rect_maps=True, compressed=True):
+        data = {
+            'mtxL': self.mtxL, 'distL': self.distL,
+            'mtxR': self.mtxR, 'distR': self.distR,
+            'R': self.R, 'T': self.T,
+            'Q': self.Q,
+        }
+        if include_rect_maps:
+            data.update({
+                'rect_mapL1': self.rect_mapL1,
+                'rect_mapL2': self.rect_mapL2,
+                'rect_mapR1': self.rect_mapR1,
+                'rect_mapR2': self.rect_mapR2,
+            })
+        save_fn = np.savez_compressed if compressed else np.savez
+        save_fn(filename, **data)
         
     def load_calibration_parameters(self, filename):
         data = np.load(filename)
@@ -93,11 +99,16 @@ class StereoSystem:
         self.distR = data['distR']
         self.R = data['R']
         self.T = data['T']
-        self.rect_mapL1 = data['rect_mapL1']
-        self.rect_mapL2 = data['rect_mapL2']
-        self.rect_mapR1 = data['rect_mapR1']
-        self.rect_mapR2 = data['rect_mapR2']
         self.Q = data['Q']
+        if 'rect_mapL1' in data:
+            self.rect_mapL1 = data['rect_mapL1']
+            self.rect_mapL2 = data['rect_mapL2']
+            self.rect_mapR1 = data['rect_mapR1']
+            self.rect_mapR2 = data['rect_mapR2']
+        else:
+            # maps will need to be generated later
+            self.rect_mapL1 = self.rect_mapL2 = None
+            self.rect_mapR1 = self.rect_mapR2 = None
     
     def rectify_pair(self, img_left, img_right):
         img_left_rect = cv2.remap(img_left, self.rect_mapL1, self.rect_mapL2, cv2.INTER_LINEAR)

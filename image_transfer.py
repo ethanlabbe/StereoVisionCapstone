@@ -194,19 +194,6 @@ class ImageClient:
         length = struct.unpack('>I', length_data)[0]
         right_image_bytes = self._recv_all(length)
         print(f"Received right image of length {length} bytes")
-        
-        try:    
-            if self.save_images:
-                timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-                left_filename = f"left_{timestamp}.jpg"
-                right_filename = f"right_{timestamp}.jpg"
-                with open(left_filename, 'wb') as fL:
-                    fL.write(left_image_bytes)
-                with open(right_filename, 'wb') as fR:
-                    fR.write(right_image_bytes)
-                print(f"Saved images as {left_filename} and {right_filename}")
-        except Exception as e:
-            print("Error saving images:", e)
             
         return left_image_bytes, right_image_bytes
         
