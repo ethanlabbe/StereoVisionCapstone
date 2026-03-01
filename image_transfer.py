@@ -78,7 +78,7 @@ class ImageServerHost:
                     self.connected = False
             print("Client disconnected")
 
-    def send_images(self, left_image_bytes, right_image_bytes=None):
+    def send_images(self, left_image, right_image):
         """Send one or two images to the connected client.
 
         Each image is prefixed with a 4-byte big-endian unsigned length.
@@ -90,16 +90,18 @@ class ImageServerHost:
             sock = self.client_socket
 
         try:
+            #convert images to bytes
+            left_image_bytes = left_image if isinstance(left_image, bytes) else left_image.tobytes()
+            right_image_bytes = right_image if isinstance(right_image, bytes) else right_image.tobytes()
             # send left image and indicator
-            sock.sendall(struct.pack('#<I', 0))  # Send a single byte to indicate left image
-            sock.sendall(struct.pack('#<I', len(left_image_bytes)))
+            sock.sendall(struct.pack('>I', 0))  # Send a single byte to indicate left image
+            sock.sendall(struct.pack('>I', len(left_image_bytes)))
             sock.sendall(left_image_bytes)
-            # send right image
-            if right_image_bytes is not None:
-                # send right image indicator
-                sock.sendall(struct.pack('#<I', 1))  # Send a single byte to indicate right image
-                sock.sendall(struct.pack('#<I', len(right_image_bytes)))
-                sock.sendall(right_image_bytes)
+            # send right image:
+            # send right image indicator
+            sock.sendall(struct.pack('>I', 1))  # Send a single byte to indicate right image
+            sock.sendall(struct.pack('>I', len(right_image_bytes)))
+            sock.sendall(right_image_bytes)
             print("Image(s) sent to client")
         except Exception as e:
             print("Error sending images:", e)
@@ -173,23 +175,23 @@ class ImageClient:
     def receive_images(self):
             # Receive left image indicator
         indicator_data = self._recv_all(4)
-        indicator = struct.unpack('#<I', indicator_data)[0]
+        indicator = struct.unpack('>I', indicator_data)[0]
         if indicator != 0:
             print("Expected left image indicator, got:", indicator)
         # Receive left image
         length_data = self._recv_all(4)
-        length = struct.unpack('#<I', length_data)[0]
+        length = struct.unpack('>I', length_data)[0]
         left_image_bytes = self._recv_all(length)
         print(f"Received left image of length {length} bytes")
 
         # Receive right image indicator
         indicator_data = self._recv_all(4)
-        indicator = struct.unpack('#<I', indicator_data)[0]
+        indicator = struct.unpack('>I', indicator_data)[0]
         if indicator != 1:
             print("Expected right image indicator, got:", indicator)
         # Receive right image
         length_data = self._recv_all(4)
-        length = struct.unpack('#<I', length_data)[0]
+        length = struct.unpack('>I', length_data)[0]
         right_image_bytes = self._recv_all(length)
         print(f"Received right image of length {length} bytes")
         
@@ -220,7 +222,7 @@ class ImageClient:
 if __name__ == "__main__":
     user_input = input("Start as server (s) or client (c)? ")
     if user_input.lower() == 'c':
-        client = ImageClient(server_host='10.42.0.1', server_port=8080, save_images=True)
+        client = ImageClient(server_host='192.168.1.105', server_port=8080, save_images=True)
         client.connect()
         try:
             while True:

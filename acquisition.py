@@ -45,8 +45,6 @@ class StereoCameraAcquisition:
         self.start()
         
     def stop(self):
-        self.left_camera.stop_preview()
-        self.right_camera.stop_preview()
         self.left_camera.stop()
         self.right_camera.stop()
         
