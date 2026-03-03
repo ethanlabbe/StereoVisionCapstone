@@ -21,11 +21,11 @@ class RaspberryPiStereoSystem:
         self.stereo_system = StereoCameraAcquisition()
         self.folder_path=""
 
-    def save_images_locally(self, left_image, right_image, left_filename="left_image.jpg", right_filename="right_image.jpg", folder="rpi/desktop/images"):
+    def save_images_locally(self, left_image, right_image, left_filename="left_image.jpg", right_filename="right_image.jpg", folder="simonspi/Desktop/images"):
         time_stamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
         cv2.imwrite(folder + "/" + left_filename + "_" + time_stamp, cv2.cvtColor(left_image, cv2.COLOR_RGB2BGR))
         cv2.imwrite(folder + "/" + right_filename + "_" + time_stamp, cv2.cvtColor(right_image, cv2.COLOR_RGB2BGR))
-        print(f"Images saved locally: {left_filename}, {right_filename}")
+        print(f"Images saved locally")
 
 
     def run(self):
@@ -90,8 +90,8 @@ class RaspberryPiStereoSystem:
             button3 = QPushButton(text="Start Server and Cameras",parent=rpiUI)
             button3.clicked.connect(lambda: self.server.start_server())
 
-            button4 = QPushButton(text="4",parent=rpiUI)
-            button4.clicked.connect(lambda : print(":)"))
+            button4 = QPushButton(text="Stop Server",parent=rpiUI)
+            button4.clicked.connect(lambda : self.server.stop_server())
 
 
             #creating the grid layout

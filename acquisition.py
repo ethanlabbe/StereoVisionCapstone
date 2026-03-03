@@ -34,15 +34,7 @@ class StereoCameraAcquisition:
     def capture_stereo_image(self):
         # capture requests and attempt to record precise timestamps
         reqL = self.left_camera.capture_sync_request()
-        # timestamp immediately after request returned (ns)
-        tsL_meta = self._request_timestamp_ns(reqL)
-        if tsL_meta is None:
-            tsL_meta = time.time_ns()
-
         reqR = self.right_camera.capture_sync_request()
-        tsR_meta = self._request_timestamp_ns(reqR)
-        if tsR_meta is None:
-            tsR_meta = time.time_ns()
 
         frameL = reqL.make_array("main")
         frameR = reqR.make_array("main")
@@ -50,7 +42,7 @@ class StereoCameraAcquisition:
         reqL.release()
         reqR.release()
 
-        return (frameL, tsL_meta), (frameR, tsR_meta)
+        return frameL, frameR
 
     def _request_timestamp_ns(self, req):
         """Try to extract a high-resolution timestamp (ns) from a request's metadata.
