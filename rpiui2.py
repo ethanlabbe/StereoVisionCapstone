@@ -21,10 +21,10 @@ class RaspberryPiStereoSystem:
         self.stereo_system = StereoCameraAcquisition()
         self.folder_path=""
 
-    def save_images_locally(self, left_image, right_image, left_filename="left_image.jpg", right_filename="right_image.jpg", folder="simonspi/Desktop/images"):
+    def save_images_locally(self, left_image, right_image, left_filename="left_image", right_filename="right_image", folder="images"):
         time_stamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-        cv2.imwrite(folder + "/" + left_filename + "_" + time_stamp, cv2.cvtColor(left_image, cv2.COLOR_RGB2BGR))
-        cv2.imwrite(folder + "/" + right_filename + "_" + time_stamp, cv2.cvtColor(right_image, cv2.COLOR_RGB2BGR))
+        cv2.imwrite(folder + "/" + left_filename + "_" + time_stamp + ".png", cv2.cvtColor(left_image, cv2.COLOR_RGB2BGR))
+        cv2.imwrite(folder + "/" + right_filename + "_" + time_stamp + ".png", cv2.cvtColor(right_image, cv2.COLOR_RGB2BGR))
         print(f"Images saved locally")
 
 
@@ -34,13 +34,13 @@ class RaspberryPiStereoSystem:
         
         # start server in background (non-blocking)
 
-        self.folder_path = "rpi/desktop/images/" + 'temp'
+        self.folder_path = "images/" + 'temp'
         if not os.path.exists(self.folder_path):
             try:
                 os.makedirs(self.folder_path)
             except Exception as e:
                 print("Failed to create folder:", e)
-                self.folder_path = "rpi/desktop/images/"
+                self.folder_path = "images/"
 
         #self.stereo_system.display_preview()
 
