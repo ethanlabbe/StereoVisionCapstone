@@ -46,10 +46,12 @@ class StereoClientDevice:
             rectified_L, rectified_R = self.stereo.rectify_pair(imgL, imgR)
             dispL, dispL2, dispR = self.stereo.compute_disparity(rectified_L, rectified_R)
             # Pass dispL directly - disparity_to_depth handles masking internally
-            depth = self.stereo.disparity_to_depth(dispL)
-            self.stereo.visualize_depth_map(depth, title="Depth Map")
+            dispL_filtered = self.stereo.postprocess_disparity(dispL)
+            depth = self.stereo.disparity_to_depth(dispL_filtered)
+            self.stereo.visualize_depth_map(depth, title="Depth Map", file_path="C:\\repos\\images\\depth_map")
+            self.stereo.save_images(imgL, imgR, folder="C:\\repos\\images\\received")
             
 
 if __name__ == "__main__":
-    device = StereoClientDevice(server_host='10.42.0.1', calibraton_params_file="calibration_params.npz") 
+    device = StereoClientDevice(server_host='10.42.0.1', calibraton_params_file="calibration_params_278cm.npz")
     device.run()

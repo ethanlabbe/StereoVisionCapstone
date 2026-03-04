@@ -3,52 +3,83 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 class StereoSystem:
-    def __init__(self):
+    def __init__(
+        self,
+        window_size=5,
+        min_disp=0,
+        num_disp=16*20,
+        block_size=5,
+        uniqueness_ratio=15,
+        speckle_window_size=100,
+        speckle_range=2,
+        disp12_max_diff=1,
+        p1=None,
+        p2=None
+    ):
         self.chessboard_size = (14, 9)  # Number of inner corners per chessboard row and column
         self.square_size = 0.0181  # Size of a square in meters
-        
+
         self.corners_L = []
         self.corners_R = []
         self.objpoints = []
-        
-        self.window_size = 5
-        self.min_disp = 0
-        self.num_disp = 16 * 20  # Must be divisible by 16
+
+        self.window_size = window_size
+        self.min_disp = min_disp
+        self.num_disp = num_disp  # Must be divisible by 16
+
+        # Improved defaults for SGBM
+        if p1 is None:
+            p1 = 8 * 3 * window_size ** 2
+        if p2 is None:
+            p2 = 32 * 3 * window_size ** 2
+
         self.left_matcher = cv2.StereoSGBM_create(
-            minDisparity=self.min_disp,
-            numDisparities=self.num_disp,
-            blockSize=5,
-            P1=8 * 3 * self.window_size ** 2,
-            P2=32 * 3 * self.window_size ** 2,
-            disp12MaxDiff=1,
-            uniquenessRatio=10,
-            speckleWindowSize=150,
-            speckleRange=1
+            minDisparity=min_disp,
+            numDisparities=num_disp,
+            blockSize=block_size,
+            P1=p1,
+            P2=p2,
+            disp12MaxDiff=disp12_max_diff,
+            uniquenessRatio=uniqueness_ratio,
+            speckleWindowSize=speckle_window_size,
+            speckleRange=speckle_range
         )
         self.right_matcher = cv2.ximgproc.createRightMatcher(self.left_matcher)
         
         
-    def find_calibration_corners(self, img_left, img_right):
+    def find_calibration_corners(self, img_left, img_right, display=False):
         gray_left = cv2.cvtColor(img_left, cv2.COLOR_BGR2GRAY)
         gray_right = cv2.cvtColor(img_right, cv2.COLOR_BGR2GRAY)
-        
+
         self.calib_size = gray_left.shape[::-1]
-        
+
         flags = cv2.CALIB_CB_NORMALIZE_IMAGE | cv2.CALIB_CB_EXHAUSTIVE | cv2.CALIB_CB_ACCURACY
-        
+
         ret_left, corners_left = cv2.findChessboardCornersSB(gray_left, self.chessboard_size, flags)
         ret_right, corners_right = cv2.findChessboardCornersSB(gray_right, self.chessboard_size, flags)
-        
+
+        # Subpixel refinement if corners found
         if ret_left and ret_right:
+            corners_right = cv2.cornerSubPix(gray_right, corners_right, (11, 11), (-1, -1), criteria=(cv2.TERM_CRITERIA_EPS +cv2.TERM_CRITERIA_MAX_ITER, 30, 0.001))
+            corners_left = cv2.cornerSubPix(gray_left, corners_left, (11, 11), (-1, -1), criteria=(cv2.TERM_CRITERIA_EPS +cv2.TERM_CRITERIA_MAX_ITER, 30, 0.001))   
+            
             self.corners_L.append(corners_left)
             self.corners_R.append(corners_right)
             objp = np.zeros((self.chessboard_size[0] * self.chessboard_size[1], 3), np.float32)
             objp[:, :2] = np.mgrid[0:self.chessboard_size[0], 0:self.chessboard_size[1]].T.reshape(-1, 2) * self.square_size
             self.objpoints.append(objp)
+            
+            if display:
+                # Visualize detected corners using OpenCV and auto-close after 1 second
+                cv2.drawChessboardCorners(
+                    img_left, self.chessboard_size, corners_left, ret_left)
+                img_left_resized = cv2.resize(img_left, (800, 600))
+                cv2.imshow('Left Chessboard Corners', img_left_resized)
+                cv2.waitKey(1000)  # Show for 1000 ms (1 second)
+                cv2.destroyAllWindows()
             return ret_left, corners_left, ret_right, corners_right
         else:
             return False, None, False, None
-    
     
     def calibrate_stereo_system(self):
         flags = cv2.CALIB_FIX_INTRINSIC
@@ -109,7 +140,32 @@ class StereoSystem:
             # maps will need to be generated later
             self.rect_mapL1 = self.rect_mapL2 = None
             self.rect_mapR1 = self.rect_mapR2 = None
-    
+
+    def preprocess_images(self, imgL, imgR, use_clahe=True, use_denoise=True):
+        outL = imgL.copy()
+        outR = imgR.copy()
+        # Denoise
+        if use_denoise:
+            outL = cv2.bilateralFilter(
+                outL, d=9, sigmaColor=75, sigmaSpace=75)
+            outR = cv2.bilateralFilter(
+                outR, d=9, sigmaColor=75, sigmaSpace=75)
+        # Contrast enhancement
+        if use_clahe:
+            labL = cv2.cvtColor(outL, cv2.COLOR_BGR2LAB)
+            lL, aL, bL = cv2.split(labL)
+            clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
+            cl = clahe.apply(lL)
+            merged = cv2.merge((cl, aL, bL))
+            outL = cv2.cvtColor(merged, cv2.COLOR_LAB2BGR)
+
+            labR = cv2.cvtColor(outR, cv2.COLOR_BGR2LAB)
+            lR, aR, bR = cv2.split(labR)
+            cl = clahe.apply(lR)
+            merged = cv2.merge((cl, aR, bR))
+            outR = cv2.cvtColor(merged, cv2.COLOR_LAB2BGR)
+        return outL, outR
+
     def rectify_pair(self, img_left, img_right):
         img_left_rect = cv2.remap(img_left, self.rect_mapL1, self.rect_mapL2, cv2.INTER_LINEAR)
         img_right_rect = cv2.remap(img_right, self.rect_mapR1, self.rect_mapR2, cv2.INTER_LINEAR)
@@ -141,6 +197,19 @@ class StereoSystem:
 
         return dispL_filtered, dispL, dispR
 
+    def postprocess_disparity(self, disparity, median_ksize=5, inpaint_radius=10):
+        disp = disparity.copy()
+        # Median filter to reduce noise
+        disp_med = cv2.medianBlur(disp.astype(np.float32), median_ksize)
+        # Inpaint small holes (NaNs or negative disparities)
+        mask = np.isnan(disp_med) | (disp_med <= 0)
+        mask = mask.astype(np.uint8) * 255
+        # Use Telea inpainting for small regions
+        disp_inpaint = cv2.inpaint(
+            disp_med, mask, inpaint_radius, cv2.INPAINT_TELEA)
+        # Restore NaNs for large invalid regions
+        disp_inpaint[mask > 0] = np.nan
+        return disp_inpaint
 
     def disparity_to_depth(self, disparity):
         if self.Q is None:
@@ -155,24 +224,34 @@ class StereoSystem:
         pts3d = cv2.reprojectImageTo3D(disp, self.Q, handleMissingValues=True)
         Z = pts3d[:, :, 2].astype(np.float32)
 
-        # If your Z sign is now correct after swapping cameras, you can drop abs().
         depth = Z
         depth[invalid] = np.nan
         depth[~np.isfinite(depth)] = np.nan
 
-        # Optional: remove absurd values that are almost always “bad disparity”
-        depth[(depth < 0.05) | (depth > 1.2)] = np.nan  # tune for your scene
+        depth[(depth < 0.05) | (depth > 20)] = np.nan  # tune for your scene
         return depth
 
-    def visualize_depth_map(self, depth, title='Depth Map'):
+    def visualize_depth_map(self, depth, original_image=None, title='Depth Map', vmin=0.25, vmax=2.5, file_path=None):
+        depth = depth.copy()
         depth[depth <= 0] = np.nan  # Mask invalid values
 
-        plt.figure(figsize=(10, 7))
-        plt.imshow(depth, cmap='plasma')
-        plt.colorbar(label='Depth (meters)')
+        if original_image is not None:
+            #plot depth map with original image side by side
+            plt.figure(figsize=(15, 7))
+            plt.subplot(1, 2, 1)
+            plt.imshow(cv2.cvtColor(original_image, cv2.COLOR_BGR2RGB))
+            plt.title("Original Image")
+            plt.axis('off')
+            plt.subplot(1, 2, 2)  
+        else:
+            plt.figure(figsize=(10, 7))
+        im = plt.imshow(depth, cmap='plasma', vmin=vmin, vmax=vmax)
+        cbar = plt.colorbar(im, label='Depth (meters)')
         plt.title(title)
         plt.xlabel('Pixel X')
         plt.ylabel('Pixel Y')
+        if file_path is not None:
+            plt.savefig(file_path, bbox_inches='tight', dpi=300)
         plt.show()
 
     def display_image(self, img, title="Image"):
@@ -181,3 +260,8 @@ class StereoSystem:
         plt.title(title)
         plt.axis('off')
         plt.show()
+        
+    def save_images(self, imgL, imgR, folder="C:\\repos\\images\\received\\"):
+        timestamp = cv2.getTickCount()
+        cv2.imwrite(f"{folder}left_image_{timestamp}.png", imgL)
+        cv2.imwrite(f"{folder}right_image_{timestamp}.png", imgR)

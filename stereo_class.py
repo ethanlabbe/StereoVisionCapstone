@@ -55,22 +55,17 @@ class CameraCalibration:
         img_right_cv = cv2.imdecode(img_right, cv2.IMREAD_COLOR)
         return img_left_cv, img_right_cv
 
-    def add_chessboard_corners(self, img_left, img_right, scale, display=False):
+    def add_chessboard_corners(self, img_left, img_right, display=False):
 
         h, w = img_left.shape[:2]
 
         gray_left = cv2.cvtColor(img_left, cv2.COLOR_BGR2GRAY)
         gray_right = cv2.cvtColor(img_right, cv2.COLOR_BGR2GRAY)
 
-        resized_gray_left = cv2.resize(gray_left, (int(w / scale), int(h / scale)))
-        resized_gray_right = cv2.resize(gray_right, (int(w / scale), int(h / scale)))
-
-        ret_left, corners_left = cv2.findChessboardCornersSB(resized_gray_left, self.chessboard_size, None)
-        ret_right, corners_right = cv2.findChessboardCornersSB(resized_gray_right, self.chessboard_size, None)
+        ret_left, corners_left = cv2.findChessboardCornersSB(gray_left, self.chessboard_size, None)
+        ret_right, corners_right = cv2.findChessboardCornersSB(gray_right, self.chessboard_size, None)
 
         if ret_left and ret_right:
-            corners_left *= scale
-            corners_right *=  scale
 
             self.objpoints.append(self.objp)
 
