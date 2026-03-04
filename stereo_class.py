@@ -1,5 +1,6 @@
 import cv2
 import numpy as np
+import matplotlib.pyplot as plt
 
 class CameraCalibration:
     def __init__(self, chessboard_size=(14,9), square_size=0.0181):
@@ -115,6 +116,8 @@ class CameraCalibration:
         #RMS reprojection error returned in px
         return rmsE1cam, rmsE2cam, rvecsR, rvecsL, tvecsR, tvecsL
 
+
+
     def stereo_calibrate_and_rectify(self, image_shape):
         """
         Stereo calibration: get R, T, E, F and rectification maps.
@@ -194,6 +197,26 @@ class StereoSystem:
         self.right_map2 = None
         self.Q = None
 
+
+    def load_calibration_parameters(self, filename):
+        data = np.load(filename)
+        self.mtxL = data['mtxL']
+        self.distL = data['distL']
+        self.mtxR = data['mtxR']
+        self.distR = data['distR']
+        self.R = data['R']
+        self.T = data['T']
+        self.Q = data['Q']
+        if 'rect_mapL1' in data:
+                self.left_map1 = data['rect_mapL1']
+                self.left_map2 = data['rect_mapL2']
+                self.right_map1 = data['rect_mapR1']
+                self.right_map2 = data['rect_mapR2']
+        else:
+            # maps will need to be generated later
+            self.rect_mapL1 = self.rect_mapL2 = None
+            self.rect_mapR1 = self.rect_mapR2 = None
+
     def set_rectification(self, left_map1, left_map2, right_map1, right_map2, Q):
         self.left_map1 = left_map1
         self.left_map2 = left_map2
@@ -223,6 +246,16 @@ class StereoSystem:
 
 
         return depth
+    
+    def visualize_depth_map(self, depth, title='Depth Map'):
+        depth[depth <= 0] = np.nan  # Mask invalid values
+        plt.figure(figsize=(10, 7))
+        plt.imshow(depth, cmap='plasma', vmax=10, vmin=0)
+        plt.colorbar(label='Depth (meters)')
+        plt.title(title)
+        plt.xlabel('Pixel X')
+        plt.ylabel('Pixel Y')
+        plt.show()
     
     def image_display(self, array):
         #Use PLT not CV2
