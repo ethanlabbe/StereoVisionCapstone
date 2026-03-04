@@ -49,7 +49,7 @@ class StereoClientDevice:
             dispL_filtered = self.stereo.postprocess_disparity(dispL)
             depth = self.stereo.disparity_to_depth(dispL_filtered)
             self.stereo.visualize_depth_map(depth, title="Depth Map", file_path="C:\\repos\\images\\depth_map")
-            self.stereo.save_images(imgL, imgR, folder="C:\\repos\\images\\received")
+            self.stereo.save_images(imgL, imgR, folder="C:\\repos\\images\\received\\")
             
 
 if __name__ == "__main__":
