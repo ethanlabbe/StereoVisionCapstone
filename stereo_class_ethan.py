@@ -75,7 +75,7 @@ class StereoSystem:
                     img_left, self.chessboard_size, corners_left, ret_left)
                 img_left_resized = cv2.resize(img_left, (800, 600))
                 cv2.imshow('Left Chessboard Corners', img_left_resized)
-                cv2.waitKey(1000)  # Show for 1000 ms (1 second)
+                cv2.waitKey(500)  # Show for 500 ms (0.5 second)
                 cv2.destroyAllWindows()
             return ret_left, corners_left, ret_right, corners_right
         else:

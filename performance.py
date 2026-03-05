@@ -5,25 +5,26 @@ def depth_rmse(predicted_depth, ground_truth_depth_value):
     #Compute RMSE for a depth map against a flat wall of known distance
 
     predicted_depth = np.array(predicted_depth, dtype=np.float32)
-    
+    actual_depth = np.full_like(predicted_depth, fill_value = ground_truth_depth_value)
+
     # Compute the squared differences
-    squared_diff = (predicted_depth - ground_truth_depth_value) ** 2
+    squared_diff = (predicted_depth - actual_depth) ** 2
     
     # Compute mean squared error
-    mse = np.mean(squared_diff)
+    mse = np.nanmean(squared_diff)
     
     # Return the root mean squared error
     rmse = np.sqrt(mse)
     
     return rmse
 
-def spatial_noise(depth_map, ignore_zeros=True):
+def spatial_noise(depth_map, ignore_nan=True):
     #Calculate spatial noise (standard deviation) of a depth map.
     depth_map = np.array(depth_map, dtype=np.float32)
 
-    if ignore_zeros:
+    if ignore_nan:
         # Mask out zero values
-        valid_depths = depth_map[depth_map != 0]
+        valid_depths = depth_map[np.isfinite(depth_map)]
     else:
         valid_depths = depth_map
 

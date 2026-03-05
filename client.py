@@ -1,6 +1,6 @@
 from image_transfer import ImageClient
 from stereo_class_ethan import StereoSystem
-import performance
+from performance import depth_rmse, spatial_noise, median_lr_consistency_error
 import numpy as np
 import cv2
 import glob 
@@ -43,15 +43,25 @@ class StereoClientDevice:
                 continue
             
             # Process images (rectification, disparity, depth)
+            print("Rectifiying Images")
             rectified_L, rectified_R = self.stereo.rectify_pair(imgL, imgR)
+            print("Computing Disparity")
             dispL, dispL2, dispR = self.stereo.compute_disparity(rectified_L, rectified_R)
             # Pass dispL directly - disparity_to_depth handles masking internally
-            dispL_filtered = self.stereo.postprocess_disparity(dispL)
-            depth = self.stereo.disparity_to_depth(dispL_filtered)
-            self.stereo.visualize_depth_map(depth, title="Depth Map", file_path="C:\\repos\\images\\depth_map")
+            #dispL_filtered = self.stereo.postprocess_disparity(dispL)
+            print("Calculating Depth")
+            depth = self.stereo.disparity_to_depth(dispL)
+            print("Visualizing Depth Map")
+            self.stereo.visualize_depth_map(depth, original_image=imgL, title="Depth Map", vmax=4, file_path="C:\\repos\\images\\depth_map")
             self.stereo.save_images(imgL, imgR, folder="C:\\repos\\images\\received\\")
+            actual_depth = 1  # replace with actual depth if known for testing
+            print("Calculating Performance Metrics")
+            rmse = depth_rmse(depth, actual_depth)
+            noise = spatial_noise(depth)
+            lr = median_lr_consistency_error(dispL, dispR)
+            print(f"Depth RMSE: {rmse:.4f} m, Spatial Noise: {noise:.4f} m, Median LR Consistency Error: {lr:.2f} pixels")
             
 
 if __name__ == "__main__":
-    device = StereoClientDevice(server_host='10.42.0.1', calibraton_params_file="calibration_params_278cm.npz")
+    device = StereoClientDevice(server_host='10.42.0.1', calibraton_params_file="calibration_params_700mm.npz")
     device.run()
