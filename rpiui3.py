@@ -79,55 +79,53 @@ class RaspberryPiStereoSystem:
     def UI_start(self):
 
             self.app = QApplication(sys.argv)
-            rpiUI= QMainWindow()
+            rpiUI = QMainWindow()
             rpiUI.setWindowTitle("Stereo Vision Capstone")
-            # Set window to full screen
-            rpiUI.showFullScreen()
+            rpiUI.setGeometry(0, 0, 1024, 600)
 
             # Picamera2 preview widget
-            qpicamera2 = QGlPicamera2(self.stereo_system.left_camera, width=1024, height=768, keep_ar=True)
+            qpicamera2 = QGlPicamera2(self.stereo_system.left_camera, width=1024, height=600, keep_ar=True)
 
             self.stereo_system.start()
 
-            # Transparent buttons
-            self.server_button = QPushButton(text="Start Server", parent=None)
-            self.server_button.clicked.connect(self.toggle_server)
-            self.server_button.setStyleSheet("background: rgba(0,0,0,0.3); color: white; border: 2px solid white; border-radius: 10px;")
-
-            capture_button = QPushButton(text="Capture", parent=None)
-            capture_button.clicked.connect(self.image_capture)
-            capture_button.setStyleSheet("background: rgba(0,0,0,0.3); color: white; border: 2px solid white; border-radius: 10px;")
-
-            quit_button = QPushButton(text="Quit", parent=None)
-            quit_button.clicked.connect(self.quitting)
-            quit_button.setStyleSheet("background: rgba(0,0,0,0.3); color: white; border: 2px solid white; border-radius: 10px;")
-
-            # Overlay layout using QStackedLayout
-            overlay_widget = QWidget()
-            overlay_layout = QStackedLayout(overlay_widget)
-            overlay_layout.addWidget(qpicamera2)
-
             # Button overlay container
             button_container = QWidget()
-            button_layout = QGridLayout()
-            button_layout.setContentsMargins(0, 0, 0, 0)
-            button_layout.setSpacing(20)
-            button_layout.addWidget(capture_button, 5, 5)
-            button_layout.addWidget(self.server_button, 5, 0)
-            button_layout.addWidget(quit_button, 0, 5)
-            button_container.setLayout(button_layout)
+            button_layout = QHBoxLayout()
+            button_layout.setContentsMargins(20, 20, 20, 20)
+            button_layout.setSpacing(40)
 
-            # Set button sizes
-            capture_button.setFixedSize(200, 80)
+            # Transparent buttons, parented to button_container
+            self.server_button = QPushButton("Start Server", button_container)
+            self.server_button.clicked.connect(self.toggle_server)
+            self.server_button.setStyleSheet("background: rgba(0,0,0,0.3); color: white; border: 2px solid white; border-radius: 10px;")
             self.server_button.setFixedSize(200, 80)
+
+            capture_button = QPushButton("Capture", button_container)
+            capture_button.clicked.connect(self.image_capture)
+            capture_button.setStyleSheet("background: rgba(0,0,0,0.3); color: white; border: 2px solid white; border-radius: 10px;")
+            capture_button.setFixedSize(200, 80)
+
+            quit_button = QPushButton("Quit", button_container)
+            quit_button.clicked.connect(self.quitting)
+            quit_button.setStyleSheet("background: rgba(0,0,0,0.3); color: white; border: 2px solid white; border-radius: 10px;")
             quit_button.setFixedSize(100, 40)
 
-            overlay_layout.addWidget(button_container)
-            overlay_layout.setStackingMode(QStackedLayout.StackAll)
+            button_layout.addWidget(self.server_button)
+            button_layout.addWidget(capture_button)
+            button_layout.addWidget(quit_button)
+            button_container.setLayout(button_layout)
+
+            # Overlay layout using QVBoxLayout
+            overlay_widget = QWidget()
+            overlay_layout = QVBoxLayout(overlay_widget)
+            overlay_layout.setContentsMargins(0, 0, 0, 0)
+            overlay_layout.setSpacing(0)
+            overlay_layout.addWidget(qpicamera2, stretch=1)
+            overlay_layout.addWidget(button_container, alignment=Qt.AlignBottom)
 
             rpiUI.setCentralWidget(overlay_widget)
 
-            #show UI (already full screen above)
+            rpiUI.show()
             self.app.exec()
 
 
