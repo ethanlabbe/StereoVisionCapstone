@@ -102,45 +102,31 @@ class RaspberryPiStereoSystem:
             quit_button.clicked.connect(self.quitting)
             quit_button.setStyleSheet("background: rgba(0,0,0,0.3); color: white; border: 2px solid white; border-radius: 10px;")
 
-            # Overlay layout using QStackedLayout
-            overlay_widget = QWidget()
-            overlay_layout = QStackedLayout(overlay_widget)
-            overlay_layout.addWidget(qpicamera2)
+            # Use QWidget as central widget for absolute positioning
+            central_widget = QWidget()
+            central_widget.setStyleSheet("background: transparent;")
+            rpiUI.setCentralWidget(central_widget)
 
-            # Transparent overlay for buttons
-            button_overlay = QWidget()
-            button_overlay.setAttribute(Qt.WA_TransparentForMouseEvents, False)
-            button_overlay.setStyleSheet("background: transparent;")
+            # Picamera display as background
+            qpicamera2.setParent(central_widget)
+            qpicamera2.setGeometry(0, 0, 1024, 600)
 
-            # Layouts for button positioning
-            main_layout = QVBoxLayout(button_overlay)
-            main_layout.setContentsMargins(0, 0, 0, 0)
-            main_layout.setSpacing(0)
-
-            # Top row (Quit button, right aligned)
-            top_row = QHBoxLayout()
-            top_row.addStretch()
-            quit_button.setFixedSize(100, 40)
-            top_row.addWidget(quit_button)
-            main_layout.addLayout(top_row)
-
-            main_layout.addStretch()
-
-            # Bottom row (Start Server left, Capture right)
-            bottom_row = QHBoxLayout()
+            # Button sizes
             self.server_button.setFixedSize(200, 80)
             capture_button.setFixedSize(200, 80)
-            bottom_row.addWidget(self.server_button)
-            bottom_row.addStretch()
-            bottom_row.addWidget(capture_button)
-            main_layout.addLayout(bottom_row)
+            quit_button.setFixedSize(100, 40)
 
-            overlay_layout.addWidget(button_overlay)
-            overlay_layout.setStackingMode(QStackedLayout.StackAll)
+            # Absolute positioning for buttons
+            self.server_button.setParent(central_widget)
+            self.server_button.move(20, 600 - 80 - 20)  # Bottom-left
 
-            rpiUI.setCentralWidget(overlay_widget)
+            capture_button.setParent(central_widget)
+            capture_button.move(1024 - 200 - 20, 600 - 80 - 20)  # Bottom-right
 
-            #show UI (already full screen above)
+            quit_button.setParent(central_widget)
+            quit_button.move(1024 - 100 - 20, 20)  # Top-right
+
+            # Show UI
             rpiUI.show()
             self.app.exec()
 
