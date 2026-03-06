@@ -107,22 +107,35 @@ class RaspberryPiStereoSystem:
             overlay_layout = QStackedLayout(overlay_widget)
             overlay_layout.addWidget(qpicamera2)
 
-            # Button overlay container
-            button_container = QWidget()
-            button_layout = QGridLayout()
-            button_layout.setContentsMargins(0, 0, 0, 0)
-            button_layout.setSpacing(20)
-            button_layout.addWidget(capture_button, 5, 5)
-            button_layout.addWidget(self.server_button, 5, 0)
-            button_layout.addWidget(quit_button, 0, 5)
-            button_container.setLayout(button_layout)
+            # Transparent overlay for buttons
+            button_overlay = QWidget()
+            button_overlay.setAttribute(Qt.WA_TransparentForMouseEvents, False)
+            button_overlay.setStyleSheet("background: transparent;")
 
-            # Set button sizes
-            capture_button.setFixedSize(200, 80)
-            self.server_button.setFixedSize(200, 80)
+            # Layouts for button positioning
+            main_layout = QVBoxLayout(button_overlay)
+            main_layout.setContentsMargins(0, 0, 0, 0)
+            main_layout.setSpacing(0)
+
+            # Top row (Quit button, right aligned)
+            top_row = QHBoxLayout()
+            top_row.addStretch()
             quit_button.setFixedSize(100, 40)
+            top_row.addWidget(quit_button)
+            main_layout.addLayout(top_row)
 
-            overlay_layout.addWidget(button_container)
+            main_layout.addStretch()
+
+            # Bottom row (Start Server left, Capture right)
+            bottom_row = QHBoxLayout()
+            self.server_button.setFixedSize(200, 80)
+            capture_button.setFixedSize(200, 80)
+            bottom_row.addWidget(self.server_button)
+            bottom_row.addStretch()
+            bottom_row.addWidget(capture_button)
+            main_layout.addLayout(bottom_row)
+
+            overlay_layout.addWidget(button_overlay)
             overlay_layout.setStackingMode(QStackedLayout.StackAll)
 
             rpiUI.setCentralWidget(overlay_widget)
