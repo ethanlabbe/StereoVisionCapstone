@@ -7,8 +7,8 @@ import datetime
 import json
 import os
 
-LEFT_CAMERA_LOCATION = 'CAM1'
-RIGHT_CAMERA_LOCATION = 'CAM0'
+LEFT_CAMERA_ID = '/base/axi/pcie@1000120000/rp1/i2c@88000/imx500@1a'
+RIGHT_CAMERA_ID = '/base/axi/pcie@1000120000/rp1/i2c@80000/imx500@1a'
 
 class StereoCameraAcquisition:
     def __init__(self, left_camera_id=0, right_camera_id=1, frame_rate=30):
@@ -21,15 +21,19 @@ class StereoCameraAcquisition:
         self.right_config = self.right_camera.create_preview_configuration(main={"size": (4056, 3040)}, controls={**self.ctrls, 'SyncMode': controls.rpi.SyncModeEnum.Client})
 
     def connect_cameras(self, camera_id=None):
-        """Connect to a camera by its ID or location."""
-        cams = Picamera2.global_camera_info()
-        print(cams)
-        for cam in cams:
-            if cam["Location"] == LEFT_CAMERA_LOCATION:
-                self.left_cam = Picamera2(cam["Num"])
-            elif cam["Location"] == RIGHT_CAMERA_LOCATION:
-                self.right_cam = Picamera2(cam["Num"])
-        return self.left_cam, self.right_cam
+        """Connect to cameras ensuring they are in the correct left/right order"""
+        available_cameras = Picamera2.list_cameras()
+        left_idx, right_idx = None, None
+        for idx, cam in enumerate(available_cameras):
+            if 'Id' in cam:
+                if cam['Id'] == LEFT_CAMERA_ID:
+                    left_idx = idx
+                elif cam['Id'] == RIGHT_CAMERA_ID:
+                    right_idx = idx
+        if left_idx is None or right_idx is None:
+            raise RuntimeError("Could not find both left and right cameras based on Id.")
+        self.left_camera = Picamera2(camera_id=left_idx)
+        self.right_camera = Picamera2(camera_id=right_idx)
 
 
     def configure_cameras(self, configL, configR):
