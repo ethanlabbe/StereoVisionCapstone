@@ -8,13 +8,13 @@ from performance import depth_rmse, spatial_noise, median_lr_consistency_error
 
 stereo = StereoSystem()
 calibrating = False
-calib_left_images = sorted(glob.glob("C:\\repos\\images\\700mm_demo2\\left_image*.png"))
-calib_right_images = sorted(glob.glob("C:\\repos\\images\\700mm_demo2\\right_image*.png"))
+calib_right_images = sorted(glob.glob("C:\\repos\\images\\received_calibration\\5cm\\left_image*.png"))
+calib_left_images = sorted(glob.glob("C:\\repos\\images\\received_calibration\\5cm\\right_image*.png"))
 
-depth_img_R = cv2.imread(
-    "C:\\repos\\images\\700mm_demo2\\right_image_20260304_200205.png")
 depth_img_L = cv2.imread(
-    "C:\\repos\\images\\700mm_demo2\\left_image_20260304_200205.png")
+    "C:\\repos\\images\\received_calibration\\5cm\\right_image_81980112651200.png")
+depth_img_R = cv2.imread(
+    "C:\\repos\\images\\received_calibration\\5cm\\left_image_81980112651200.png")
 
 
 if calibrating:
@@ -34,7 +34,7 @@ if calibrating:
     # Use more robust calibration flags
     stereo.calibrate_stereo_system()
     stereo.generate_rectification_maps()
-    stereo.save_calibration_parameters("calibration_params_700mm.npz")
+    stereo.save_calibration_parameters("calibration_params_5cm.npz")
     # Print baseline from Q matrix
     baseline = 1.0 / stereo.Q[3, 2]
     actual_baseline = 0.07  # replace with actual measured baseline in meters
@@ -47,7 +47,7 @@ if calibrating:
     print(f"Right reprojection error: {stereo.retR:.2f}px")
     print(f"Stereo reprojection error: {stereo.stereo_ret:.2f}px")
 else:
-    stereo.load_calibration_parameters("calibration_params_700mm.npz")
+    stereo.load_calibration_parameters("calibration_params_5cm.npz")
 
 # depth_img_L, depth_img_R = stereo.preprocess_images(depth_img_L, depth_img_R)
 rectified_L, rectified_R = stereo.rectify_pair(depth_img_L, depth_img_R)
@@ -55,7 +55,7 @@ dispL, dispL2, dispR = stereo.compute_disparity(rectified_L, rectified_R)
 # Pass dispL directly - disparity_to_depth handles masking internally
 #dispL_filtered = stereo.postprocess_disparity(dispL)
 depth = stereo.disparity_to_depth(dispL)
-stereo.visualize_depth_map(depth, title="Depth Map", file_path="C:\\repos\\images\\depth_map")
+stereo.visualize_depth_map(depth, title="Depth Map", save_folder="C:\\repos\\images\\depth_maps\\")
 actual_depth = 1  # replace with actual depth if known for testing
 rmse = depth_rmse(depth, actual_depth)
 noise = spatial_noise(depth)

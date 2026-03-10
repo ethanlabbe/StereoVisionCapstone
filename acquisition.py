@@ -7,16 +7,30 @@ import datetime
 import json
 import os
 
+LEFT_CAMERA_LOCATION = 'CAM1'
+RIGHT_CAMERA_LOCATION = 'CAM0'
+
 class StereoCameraAcquisition:
     def __init__(self, left_camera_id=0, right_camera_id=1, frame_rate=30):
-        self.left_camera = Picamera2(camera_num=left_camera_id)
-        self.right_camera = Picamera2(camera_num=right_camera_id)
+        self.connect_cameras()
         
         self.framerate = frame_rate
         self.ctrls = {"FrameRate": self.framerate,}
 
         self.left_config = self.left_camera.create_preview_configuration(main={"size": (4056, 3040)}, lores={"size":(1024, 600)}, controls={**self.ctrls, 'SyncMode': controls.rpi.SyncModeEnum.Server})
         self.right_config = self.right_camera.create_preview_configuration(main={"size": (4056, 3040)}, controls={**self.ctrls, 'SyncMode': controls.rpi.SyncModeEnum.Client})
+
+    def connect_cameras(self, camera_id=None):
+        """Connect to a camera by its ID or location."""
+        cams = Picamera2.global_camera_info()
+        print(cams)
+        for cam in cams:
+            if cam["Location"] == LEFT_CAMERA_LOCATION:
+                self.left_cam = Picamera2(cam["Num"])
+            elif cam["Location"] == RIGHT_CAMERA_LOCATION:
+                self.right_cam = Picamera2(cam["Num"])
+        return self.left_cam, self.right_cam
+
 
     def configure_cameras(self, configL, configR):
         self.left_camera.configure(configL)
@@ -89,6 +103,7 @@ class StereoCameraAcquisition:
 
 if __name__ == "__main__":
     stereo_system = StereoCameraAcquisition()
+    input("Press Enter to initialize cameras...")
     running = True
     stereo_system.initialize_cameras()
     stereo_system.display_preview()
