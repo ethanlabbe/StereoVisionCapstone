@@ -22,18 +22,13 @@ class StereoCameraAcquisition:
 
     def connect_cameras(self, camera_id=None):
         """Connect to cameras ensuring they are in the correct left/right order"""
-        available_cameras = Picamera2.list_cameras()
-        left_idx, right_idx = None, None
+        available_cameras = Picamera2.global_camera_info()
         for idx, cam in enumerate(available_cameras):
             if 'Id' in cam:
                 if cam['Id'] == LEFT_CAMERA_ID:
-                    left_idx = idx
+                    self.left_camera = Picamera2(cam['Num'])
                 elif cam['Id'] == RIGHT_CAMERA_ID:
-                    right_idx = idx
-        if left_idx is None or right_idx is None:
-            raise RuntimeError("Could not find both left and right cameras based on Id.")
-        self.left_camera = Picamera2(camera_id=left_idx)
-        self.right_camera = Picamera2(camera_id=right_idx)
+                    self.right_camera = Picamera2(cam['Num'])
 
 
     def configure_cameras(self, configL, configR):
