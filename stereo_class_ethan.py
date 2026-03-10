@@ -231,7 +231,7 @@ class StereoSystem:
         depth[(depth < 0.05) | (depth > 20)] = np.nan  # tune for your scene
         return depth
 
-    def visualize_depth_map(self, depth, original_image=None, title='Depth Map', vmin=0.25, vmax=2.5, file_path=None):
+    def visualize_depth_map(self, depth, original_image=None, title='Depth Map', vmin=0.25, vmax=2.5, save_folder=None):
         depth = depth.copy()
         depth[depth <= 0] = np.nan  # Mask invalid values
 
@@ -250,8 +250,10 @@ class StereoSystem:
         plt.title(title)
         plt.xlabel('Pixel X')
         plt.ylabel('Pixel Y')
-        if file_path is not None:
-            plt.savefig(file_path, bbox_inches='tight', dpi=300)
+        if save_folder is not None:
+            timestamp = cv2.getTickCount()
+            path = f"{save_folder}depth_map_{timestamp}.png"
+            plt.savefig(path, bbox_inches='tight', dpi=300)
         plt.show()
 
     def display_image(self, img, title="Image"):
