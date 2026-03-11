@@ -56,7 +56,7 @@ class StereoClientDevice:
             self.run_depth_map_pipeline(imgL, imgR)
 
     
-    def run_depth_map_pipeline(self, imgL, imgR):
+    def run_depth_map_pipeline(self, imgL, imgR, print_metrics=False, actual_depth=0.6):
         # Process images (rectification, disparity, depth)
         print("Rectifiying Images")
         rectified_L, rectified_R = self.stereo.rectify_pair(imgL, imgR)
@@ -69,12 +69,12 @@ class StereoClientDevice:
         depth = self.stereo.disparity_to_depth(dispL)
         print("Visualizing Depth Map")
         self.stereo.visualize_depth_map(depth, original_image=imgL, title="Depth Map", vmax=1.75, save_folder="C:\\repos\\images\\depth_maps\\")
-        actual_depth = 1  # replace with actual depth if known for testing
-        # print("Calculating Performance Metrics")
-        # rmse = depth_rmse(depth, actual_depth)
-        # noise = spatial_noise(depth)
-        # lr = median_lr_consistency_error(dispL, dispR)
-        # print(f"Depth RMSE: {rmse:.4f} m, Spatial Noise: {noise:.4f} m, Median LR Consistency Error: {lr:.2f} pixels")
+        if print_metrics:
+            print("Calculating Performance Metrics")
+            rmse = depth_rmse(depth, actual_depth)
+            noise = spatial_noise(depth)
+            lr = median_lr_consistency_error(dispL, dispR)
+            print(f"Depth RMSE: {rmse:.4f} m, Spatial Noise: {noise:.4f} m, Median LR Consistency Error: {lr:.2f} pixels")
 
     def run(self):
         self.client.connect()
@@ -97,5 +97,5 @@ class StereoClientDevice:
             
 
 if __name__ == "__main__":
-    device = StereoClientDevice(server_host='10.42.0.1', calibrating=False, calibraton_params_file="calibration_params_5cm.npz")
+    device = StereoClientDevice(server_host='192.168.137.79', calibrating=False, calibraton_params_file="calibration_params_450mm.npz")
     device.run()
