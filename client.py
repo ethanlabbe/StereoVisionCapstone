@@ -55,7 +55,6 @@ class StereoClientDevice:
             print(f"Stereo reprojection error: {self.stereo.stereo_ret:.2f}px")
             self.run_depth_map_pipeline(imgL, imgR)
 
-        
     
     def run_depth_map_pipeline(self, imgL, imgR):
         # Process images (rectification, disparity, depth)

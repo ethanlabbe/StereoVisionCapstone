@@ -4,6 +4,7 @@ import struct
 import time
 import sys
 import datetime
+import queue
 
 class ImageServerHost:
     """Non-blocking image server that accepts a single client and sends images
@@ -20,6 +21,8 @@ class ImageServerHost:
         self._accept_thread = None
         self._client_threads = []
         self._running = False
+        self._image_queue = queue.Queue()
+        self._queue_thread = None
 
     def start_server(self):
         self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -30,6 +33,39 @@ class ImageServerHost:
         print(f"Image server started on {self.host}:{self.port}")
         self._accept_thread = threading.Thread(target=self._accept_loop)
         self._accept_thread.start()
+        self._queue_thread = threading.Thread(target=self._queue_loop, daemon=True)
+        self._queue_thread.start()
+    def _queue_loop(self):
+        while self._running:
+            try:
+                item = self._image_queue.get(timeout=0.1)
+            except queue.Empty:
+                continue
+            left_image, right_image = item
+            with self._lock:
+                if not self.connected or not self.client_socket:
+                    print("No client connected, skipping image send")
+                    continue
+                sock = self.client_socket
+            try:
+                left_image_bytes = left_image if isinstance(left_image, bytes) else left_image.tobytes()
+                right_image_bytes = right_image if isinstance(right_image, bytes) else right_image.tobytes()
+                sock.sendall(struct.pack('>I', 0))  # left image indicator
+                sock.sendall(struct.pack('>I', len(left_image_bytes)))
+                sock.sendall(left_image_bytes)
+                sock.sendall(struct.pack('>I', 1))  # right image indicator
+                sock.sendall(struct.pack('>I', len(right_image_bytes)))
+                sock.sendall(right_image_bytes)
+                print("Image(s) sent to client (from queue)")
+            except Exception as e:
+                print("Error sending images from queue:", e)
+                with self._lock:
+                    try:
+                        sock.close()
+                    except Exception:
+                        pass
+                    self.client_socket = None
+                    self.connected = False
 
     def _accept_loop(self):
         while self._running:
@@ -79,39 +115,14 @@ class ImageServerHost:
             print("Client disconnected")
 
     def send_images(self, left_image, right_image):
-        """Send one or two images to the connected client.
-
-        Each image is prefixed with a 4-byte big-endian unsigned length.
-        Raises ConnectionError if no client is connected.
-        """
+        """Queue one or two images for sending to the connected client.
+        Images will be sent in the background when a client is connected.
+        Raises ConnectionError if no client is connected."""
         with self._lock:
             if not self.connected or not self.client_socket:
                 raise ConnectionError("No client connected")
-            sock = self.client_socket
-
-        try:
-            #convert images to bytes
-            left_image_bytes = left_image if isinstance(left_image, bytes) else left_image.tobytes()
-            right_image_bytes = right_image if isinstance(right_image, bytes) else right_image.tobytes()
-            # send left image and indicator
-            sock.sendall(struct.pack('>I', 0))  # Send a single byte to indicate left image
-            sock.sendall(struct.pack('>I', len(left_image_bytes)))
-            sock.sendall(left_image_bytes)
-            # send right image:
-            # send right image indicator
-            sock.sendall(struct.pack('>I', 1))  # Send a single byte to indicate right image
-            sock.sendall(struct.pack('>I', len(right_image_bytes)))
-            sock.sendall(right_image_bytes)
-            print("Image(s) sent to client")
-        except Exception as e:
-            print("Error sending images:", e)
-            with self._lock:
-                try:
-                    sock.close()
-                except Exception:
-                    pass
-                self.client_socket = None
-                self.connected = False
+        self._image_queue.put((left_image, right_image))
+        print("Images queued for transfer")
 
     def stop_server(self):
         self._running = False
@@ -139,6 +150,11 @@ class ImageServerHost:
                 t.join(timeout=1)
             except Exception:
                 pass
+        try:
+            if self._queue_thread:
+                self._queue_thread.join(timeout=2)
+        except Exception:
+            pass
         try:
             sys.stdout.flush()
         except Exception:
@@ -209,7 +225,7 @@ class ImageClient:
 if __name__ == "__main__":
     user_input = input("Start as server (s) or client (c)? ")
     if user_input.lower() == 'c':
-        client = ImageClient(server_host='192.168.1.105', server_port=8080, save_images=True)
+        client = ImageClient(server_host='localhost', server_port=8080, save_images=True)
         client.connect()
         try:
             while True:
@@ -230,12 +246,14 @@ if __name__ == "__main__":
                         #load files from popup dialog to send
                         left_image = None
                         right_image = None
-                        with open("C:\\Users\\15877\\OneDrive\\Documents\\GitHub\\StereoVisionCapstone\\LeftCBoard.png", 'rb') as fL:
+                        with open("C:\\Users\\Ethan\\OneDrive\\Desktop\\Labs\\5th year\\Capstone\\left_20260228_214325.jpg", 'rb') as fL:
                             left_image = fL.read()
-                        with open("C:\\Users\\15877\\OneDrive\\Documents\\GitHub\\StereoVisionCapstone\\RightCBoard.png", 'rb') as fR:
+                        with open("C:\\Users\\Ethan\\OneDrive\\Desktop\\Labs\\5th year\\Capstone\\right_20260228_214325.jpg", 'rb') as fR:
                             right_image = fR.read()
                         try:
-                            server.send_images(left_image, right_image)
+                            for i in range(5):
+                                print(f"Queueing image set {i+1} for transfer...")
+                                server.send_images(left_image, right_image)
                         except ConnectionError:
                             print("No client connected to send images")
                     elif control_input.lower() == 'n':
