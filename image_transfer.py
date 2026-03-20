@@ -29,12 +29,19 @@ class ImageServerHost:
         self.server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.server_socket.bind((self.host, self.port))
         self.server_socket.listen(1)
+        
+        #Unblock the accept loop every 1 second
+        self.server_socket.settimeout(1.0) 
+        
         self._running = True
         print(f"Image server started on {self.host}:{self.port}")
-        self._accept_thread = threading.Thread(target=self._accept_loop)
+        
+        self._accept_thread = threading.Thread(target=self._accept_loop, daemon=True)
         self._accept_thread.start()
+        
         self._queue_thread = threading.Thread(target=self._queue_loop, daemon=True)
         self._queue_thread.start()
+
     def _queue_loop(self):
         while self._running:
             try:
@@ -71,9 +78,13 @@ class ImageServerHost:
         while self._running:
             try:
                 client_sock, addr = self.server_socket.accept()
+            except socket.timeout:
+                #Ignore the timeout, loop back and check self._running
+                continue 
             except OSError:
                 print("Server socket closed, stopping accept loop")
                 break
+            
             with self._lock:
                 # if another client is connected, refuse new connection
                 if self.client_socket:
@@ -85,8 +96,8 @@ class ImageServerHost:
                 self.client_socket = client_sock
                 self.connected = True
             print(f"Client connected from {addr}")
-            # start monitor to detect disconnects
-            t = threading.Thread(target=self._client_monitor, args=(client_sock,))
+            
+            t = threading.Thread(target=self._client_monitor, args=(client_sock,), daemon=True)
             t.start()
             self._client_threads.append(t)
 
@@ -189,7 +200,7 @@ class ImageClient:
     
     #receive 2 images
     def receive_images(self):
-            # Receive left image indicator
+        # Receive left image indicator
         indicator_data = self._recv_all(4)
         indicator = struct.unpack('>I', indicator_data)[0]
         if indicator != 0:
@@ -258,6 +269,9 @@ if __name__ == "__main__":
                             print("No client connected to send images")
                     elif control_input.lower() == 'n':
                         continue
+                else:
+                    # FIX: Sleep to yield CPU time when no client is connected
+                    time.sleep(0.1)
         except KeyboardInterrupt:
             print("\nShutting down server")
             server.stop_server()

@@ -18,7 +18,7 @@ class RaspberryPiStereoSystem:
         self.running = False
 
         # bind to a local IP address reachable on your network
-        self.server = ImageServerHost(host='10.42.0.1', port=8080)
+        self.server = ImageServerHost(host='10.0.0.15', port=8080)
         self.stereo_system = StereoCameraAcquisition()
         self.folder_path=""
 
@@ -29,7 +29,7 @@ class RaspberryPiStereoSystem:
         print(f"Images saved locally")
 
     def toggle_server(self):
-        if self.server.connected:
+        if self.server._running:
             self.server.stop_server()
             self.server_button.setText("Start Server")
         else:
@@ -92,15 +92,15 @@ class RaspberryPiStereoSystem:
             # Transparent buttons
             self.server_button = QPushButton(text="Start Server", parent=None)
             self.server_button.clicked.connect(self.toggle_server)
-            self.server_button.setStyleSheet("background: rgba(0,0,0,0.3); color: white; border: 2px solid white; border-radius: 10px;")
+            self.server_button.setStyleSheet("background: rgba(0,0,0,0.3); color: white; border: 2px solid white; border-radius: 10px; font-size: 24px; font-weight: bold;")
 
             capture_button = QPushButton(text="Capture", parent=None)
             capture_button.clicked.connect(self.image_capture)
-            capture_button.setStyleSheet("background: rgba(0,0,0,0.3); color: white; border: 2px solid white; border-radius: 10px;")
+            capture_button.setStyleSheet("background: rgba(0,0,0,0.3); color: white; border: 2px solid white; border-radius: 10px; font-size: 24px; font-weight: bold;")
 
             quit_button = QPushButton(text="Quit", parent=None)
             quit_button.clicked.connect(self.quitting)
-            quit_button.setStyleSheet("background: rgba(0,0,0,0.3); color: white; border: 2px solid white; border-radius: 10px;")
+            quit_button.setStyleSheet("background: rgba(0,0,0,0.3); color: white; border: 2px solid white; border-radius: 10px; font-size: 18px; font-weight: bold;")
 
             # Use QWidget as central widget for absolute positioning
             central_widget = QWidget()
