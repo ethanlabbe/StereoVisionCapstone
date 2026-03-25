@@ -8,7 +8,7 @@ class StereoSystem:
         window_size=5,
         min_disp=0,
         num_disp=16*20,
-        block_size=5,
+        block_size=3,
         uniqueness_ratio=15,
         speckle_window_size=100,
         speckle_range=2,
