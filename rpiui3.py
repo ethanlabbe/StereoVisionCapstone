@@ -4,11 +4,11 @@ from acquisition import StereoCameraAcquisition
 import cv2
 import datetime
 import threading
-
+import netifaces
 
 #ui imports
 import sys
-from PyQt5.QtWidgets import QApplication, QMainWindow, QPushButton, QGridLayout, QWidget, QLabel, QStackedLayout, QVBoxLayout, QHBoxLayout
+from PyQt5.QtWidgets import QApplication, QMainWindow, QPushButton, QGridLayout, QWidget, QLabel
 from PyQt5.QtCore import Qt
 from picamera2.previews.qt import QGlPicamera2
 
@@ -16,9 +16,9 @@ from picamera2.previews.qt import QGlPicamera2
 class RaspberryPiStereoSystem:
     def __init__(self):
         self.running = False
-
+        self.ipaddress = netifaces.ifaddresses('wlan0')[netifaces.AF_INET][0]['addr']
         # bind to a local IP address reachable on your network
-        self.server = ImageServerHost(host='10.0.0.15', port=8080)
+        self.server = ImageServerHost(host=self.ipaddress, port=8080)
         self.stereo_system = StereoCameraAcquisition()
         self.folder_path=""
 
@@ -102,6 +102,11 @@ class RaspberryPiStereoSystem:
             quit_button.clicked.connect(self.quitting)
             quit_button.setStyleSheet("background: rgba(0,0,0,0.3); color: white; border: 2px solid white; border-radius: 10px; font-size: 18px; font-weight: bold;")
 
+            #ip address label
+            ip_label = QLabel(f"IP: {self.ipaddress}", parent=None)
+            ip_label.setStyleSheet("background: rgba(0,0,0,0.3); color: white; font-size: 18px; font-weight: bold;")
+
+
             # Use QWidget as central widget for absolute positioning
             central_widget = QWidget()
             central_widget.setStyleSheet("background: transparent;")
@@ -125,6 +130,11 @@ class RaspberryPiStereoSystem:
 
             quit_button.setParent(central_widget)
             quit_button.move(1024 - 100 - 20, 20)  # Top-right
+
+            # IP label movement and sizing
+            ip_label.setFixedSize(150, 80)
+            ip_label.setParent(central_widget)
+            ip_label.move(20, 20)  # Top-left
 
             # Show UI
             rpiUI.show()
