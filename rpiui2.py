@@ -17,7 +17,7 @@ class RaspberryPiStereoSystem:
         self.running = False
 
         # bind to a local IP address reachable on your network
-        self.server = ImageServerHost(host='10.42.0.1', port=8080)
+        self.server = ImageServerHost(host='192.168.137.79', port=8080)
         self.stereo_system = StereoCameraAcquisition()
         self.folder_path=""
 
