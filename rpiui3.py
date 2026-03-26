@@ -98,8 +98,8 @@ class RaspberryPiStereoSystem:
             capture_button.clicked.connect(self.image_capture)
             capture_button.setStyleSheet("background: rgba(0,0,0,0.3); color: white; border: 2px solid white; border-radius: 10px; font-size: 24px; font-weight: bold;")
 
-            quit_button = QPushButton(text="Swap Cameras", parent=None)
-            quit_button.clicked.connect(self.stereo_system.swap_cameras)
+            quit_button = QPushButton(text="Quit", parent=None)
+            quit_button.clicked.connect(self.quitting)
             quit_button.setStyleSheet("background: rgba(0,0,0,0.3); color: white; border: 2px solid white; border-radius: 10px; font-size: 18px; font-weight: bold;")
 
             #ip address label
@@ -132,7 +132,7 @@ class RaspberryPiStereoSystem:
             quit_button.move(1024 - 100 - 20, 20)  # Top-right
 
             # IP label movement and sizing
-            ip_label.setFixedSize(150, 40)
+            ip_label.setFixedSize(150, 80)
             ip_label.setParent(central_widget)
             ip_label.move(20, 20)  # Top-left
 

@@ -98,8 +98,6 @@ class StereoCameraAcquisition:
         self.left_camera.stop()
         self.right_camera.stop()
         
-    def swap_cameras(self):
-        self.left_camera, self.right_camera = self.right_camera, self.left_camera    
     
 
 if __name__ == "__main__":
