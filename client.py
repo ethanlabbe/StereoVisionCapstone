@@ -14,12 +14,7 @@ class StereoClientDevice:
         if not calibrating:
             self.stereo.load_calibration_parameters(calibraton_params_file)
         self.calibration_path = calibraton_params_file
-        self.calibrating = calibrating
-
-    
-    def load_local_images(self, left_filename="left_image.jpg", right_filename="right_image.jpg"):
-        #load images from local storage
-        pass    
+        self.calibrating = calibrating  
     
     def reconstruct(self, bytes, image_height=3040, image_width=4056, channels=4):
         # always 4-channel RGBA
