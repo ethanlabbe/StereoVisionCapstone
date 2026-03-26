@@ -97,5 +97,5 @@ class StereoClientDevice:
             
 
 if __name__ == "__main__":
-    device = StereoClientDevice(server_host='192.168.137.79', calibrating=False, calibraton_params_file="calibration_params_450mm.npz")
+    device = StereoClientDevice(server_host='192.168.137.79', calibrating=False, calibraton_params_file="calibration_params_60mm.npz")
     device.run()

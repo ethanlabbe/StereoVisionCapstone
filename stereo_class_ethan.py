@@ -14,7 +14,8 @@ class StereoSystem:
         speckle_range=2,
         disp12_max_diff=1,
         p1=None,
-        p2=None
+        p2=None,
+        wls_lambda=8000.0
     ):
         self.chessboard_size = (14, 9)  # Number of inner corners per chessboard row and column
         self.square_size = 0.0181  # Size of a square in meters
@@ -26,6 +27,7 @@ class StereoSystem:
         self.window_size = window_size
         self.min_disp = min_disp
         self.num_disp = num_disp  # Must be divisible by 16
+        self.wls_lambda = wls_lambda
 
         # Improved defaults for SGBM
         if p1 is None:
@@ -184,7 +186,7 @@ class StereoSystem:
             imgR, imgL)     # CV_16S, scaled by 16
 
         wls = cv2.ximgproc.createDisparityWLSFilter(matcher_left=self.left_matcher)
-        wls.setLambda(8000.0)
+        wls.setLambda(self.wls_lambda)
         wls.setSigmaColor(1.5)
 
         # Correct Python signature: filter(disparity_left, left_view, disparity_right)
@@ -255,6 +257,7 @@ class StereoSystem:
             path = f"{save_folder}depth_map_{timestamp}.png"
             plt.savefig(path, bbox_inches='tight', dpi=300)
         plt.show()
+        #plt.close()
 
     def display_image(self, img, title="Image"):
         plt.figure(figsize=(10, 7))
