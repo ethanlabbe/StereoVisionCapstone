@@ -56,7 +56,10 @@ class RaspberryPiStereoSystem:
         self.stereo_system.stop()
         self.server.stop_server()
         self.app.quit()
-
+    
+    def swap_cameras(self):
+        self.stereo_system.swap_cameras()
+        
 
     def image_capture(self):
         capture_thread = threading.Thread(target=self._do_capture)
