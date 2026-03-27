@@ -77,8 +77,8 @@ class StereoClientDevice:
         while self.client.connected:
             imgL_bytes, imgR_bytes = self.client.receive_images()
             try:
-                imgR = self.reconstruct(imgL_bytes)
-                imgL = self.reconstruct(imgR_bytes)
+                imgL = self.reconstruct(imgL_bytes)
+                imgR = self.reconstruct(imgR_bytes)
             except ValueError as e:
                 print("Error: Failed to decode or reshape images.", e)
                 continue
