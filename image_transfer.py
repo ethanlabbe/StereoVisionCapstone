@@ -23,6 +23,8 @@ class ImageServerHost:
         self._running = False
         self._image_queue = queue.Queue()
         self._queue_thread = None
+        self.on_send_start = None
+        self.on_send_complete = None
 
     def start_server(self):
         self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -48,22 +50,36 @@ class ImageServerHost:
                 item = self._image_queue.get(timeout=0.1)
             except queue.Empty:
                 continue
+                
             left_image, right_image = item
+            
             with self._lock:
                 if not self.connected or not self.client_socket:
                     print("No client connected, skipping image send")
                     continue
                 sock = self.client_socket
+                
             try:
                 left_image_bytes = left_image if isinstance(left_image, bytes) else left_image.tobytes()
                 right_image_bytes = right_image if isinstance(right_image, bytes) else right_image.tobytes()
+                
+                # TRIGGER START CALLBACK
+                if self.on_send_start:
+                    self.on_send_start()
+                
                 sock.sendall(struct.pack('>I', 0))  # left image indicator
                 sock.sendall(struct.pack('>I', len(left_image_bytes)))
                 sock.sendall(left_image_bytes)
+                
                 sock.sendall(struct.pack('>I', 1))  # right image indicator
                 sock.sendall(struct.pack('>I', len(right_image_bytes)))
                 sock.sendall(right_image_bytes)
-                print("Image(s) sent to client (from queue)")
+                
+                # TRIGGER COMPLETE CALLBACK
+                if self.on_send_complete:
+                    self.on_send_complete()
+                    
+                print(f"Image(s) sent to client (from queue)")
             except Exception as e:
                 print("Error sending images from queue:", e)
                 with self._lock:
@@ -73,6 +89,7 @@ class ImageServerHost:
                         pass
                     self.client_socket = None
                     self.connected = False
+
 
     def _accept_loop(self):
         while self._running:
@@ -133,7 +150,7 @@ class ImageServerHost:
             if not self.connected or not self.client_socket:
                 raise ConnectionError("No client connected")
         self._image_queue.put((left_image, right_image))
-        print("Images queued for transfer")
+        print(f"Images queued for transfer")
 
     def stop_server(self):
         self._running = False
