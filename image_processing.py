@@ -6,19 +6,19 @@ from stereo_class_ethan import StereoSystem
 from performance import depth_rmse, spatial_noise, median_lr_consistency_error, get_roi
 #from stereo_class import StereoSystem, CameraCalibration
 
-stereo = StereoSystem(num_disp=160,block_size=3)
+stereo = StereoSystem(block_size=5)
 calibrating = False
-calib_file_path = "test_calib_60mm_0.5.npz"
+calib_file_path = "test_calib_65mm_0.5.npz"
 scale_factor = 0.5
 
 
 calib_right_images = sorted(glob.glob("C:\\repos\\images\\received_calibration\\5cm\\left_image*.png"))
 calib_left_images = sorted(glob.glob("C:\\repos\\images\\received_calibration\\5cm\\right_image*.png"))
 
-depth_img_L = cv2.imread(
-    "C:\\repos\\images\\testing\\60mm\\left_image_446045801012100.png")
 depth_img_R = cv2.imread(
-    "C:\\repos\\images\\testing\\60mm\\right_image_446045801012100.png")
+    "C:\\repos\\images\\testing\\65mm\\depth\\right_image_447840504366400.png")
+depth_img_L = cv2.imread(
+    "C:\\repos\\images\\testing\\65mm\\depth\\left_image_447840504366400.png")
 
 depth_img_L = cv2.resize(depth_img_L, (0, 0), fx=scale_factor, fy=scale_factor)
 depth_img_R = cv2.resize(depth_img_R, (0, 0), fx=scale_factor, fy=scale_factor)

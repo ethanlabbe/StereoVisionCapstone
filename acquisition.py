@@ -6,18 +6,18 @@ import datetime
 import json
 import os
 
-LEFT_CAMERA_ID = '/base/axi/pcie@1000120000/rp1/i2c@88000/imx500@1a'
-RIGHT_CAMERA_ID = '/base/axi/pcie@1000120000/rp1/i2c@80000/imx500@1a'
+RIGHT_CAMERA_ID = '/base/axi/pcie@1000120000/rp1/i2c@88000/imx500@1a'
+LEFT_CAMERA_ID = '/base/axi/pcie@1000120000/rp1/i2c@80000/imx500@1a'
 
 class StereoCameraAcquisition:
-    def __init__(self, left_camera_id=0, right_camera_id=1, frame_rate=30):
+    def __init__(self, frame_rate=30):
         self.connect_cameras()
         
         self.framerate = frame_rate
         self.ctrls = {"FrameRate": self.framerate,}
 
-        self.left_config = self.left_camera.create_preview_configuration(main={"size": (4056, 3040)}, lores={"size":(1024, 600)}, controls={**self.ctrls, 'SyncMode': controls.rpi.SyncModeEnum.Server})
-        self.right_config = self.right_camera.create_preview_configuration(main={"size": (4056, 3040)}, controls={**self.ctrls, 'SyncMode': controls.rpi.SyncModeEnum.Client})
+        self.left_config = self.left_camera.create_preview_configuration(main={"size": (2028, 1520)}, lores={"size":(1024, 600)}, controls={**self.ctrls, 'SyncMode': controls.rpi.SyncModeEnum.Server})
+        self.right_config = self.right_camera.create_preview_configuration(main={"size": (2028, 1520)}, controls={**self.ctrls, 'SyncMode': controls.rpi.SyncModeEnum.Client})
 
     def connect_cameras(self, camera_id=None):
         """Connect to cameras ensuring they are in the correct left/right order"""

@@ -3,31 +3,30 @@ import numpy as np
 import glob
 import matplotlib.pyplot as plt
 from stereo_class_ethan import StereoSystem
-from performance import depth_rmse, spatial_noise, median_lr_consistency_error
+from performance import depth_rmse, spatial_noise, median_lr_consistency_error, get_roi
 #from stereo_class import StereoSystem, CameraCalibration
 
 stereo = StereoSystem()
-calibrating = False
+calibrating = True
 images_folder = "C:\\repos\\images\\testing"
 depth_folder = "depth"
 
-scales = [0.25, 0.5, 1.0]
+scales = [0.5, 1.0]
 
 
 for scale in scales:
     print(f"Processing images at scale: {scale}")
-    # with open(f"calibration_results_{scale}.csv", "w") as f:
-    #     f.write("Folder,Pairs_Found,Baseline_cm,Baseline_Error_Percent,Left_Reprojection_Error_px,Right_Reprojection_Error_px,Stereo_Reprojection_Error_px,Depth_RMSE_m,Spatial_Noise_m,Median_LR_Consistency_Error_px\n")
+    with open(f"calibration_results_{scale}.csv", "w") as f:
+        f.write("Folder,Pairs_Found,Baseline_cm,Baseline_Error_Percent,Left_Reprojection_Error_px,Right_Reprojection_Error_px,Stereo_Reprojection_Error_px,Depth_RMSE_m,Spatial_Noise_m,Median_LR_Consistency_Error_px\n")
 
-    # for folder in glob.glob(images_folder + "/*/"):
-    for folder in ["60mm", "65mm"]:
-        stereo = StereoSystem(num_disp=80, block_size=9, wls_lambda=4000)
-        
-        folder = images_folder + "\\" + folder + "\\"
+    for folder in glob.glob(images_folder + "/*/"):
+    #for folder in ["60mm", "65mm"]:
+        stereo = StereoSystem(block_size=3, num_disp=160)
+    
         folder_name = folder.split("\\")[-2]
         folder_depth = folder + "\\" + depth_folder + "\\"
         
-        if folder_name in  ["700mm", "450mm", "60mm", "65mm"]:
+        if folder_name in  ["70mm", "45mm", "60mm", "65mm"]:
             calib_left_images = sorted(glob.glob(folder + "left_image*.png"))
             calib_right_images = sorted(glob.glob(folder + "right_image*.png"))
             depth_img_L = cv2.imread(glob.glob(folder_depth + "left_image*.png")[0])
@@ -85,10 +84,12 @@ for scale in scales:
         depth = stereo.disparity_to_depth(dispL)
         stereo.visualize_depth_map(depth, title=f"Depth Map with scale {scale}",original_image=depth_img_L, vmax=1.5,save_folder=f"C:\\repos\\images\\testing\\{folder_name}\\depth_maps\\")
         actual_depth = 0.6  # replace with actual depth if known for testing
-        rmse = depth_rmse(depth, actual_depth)
-        noise = spatial_noise(depth)
-        lr = median_lr_consistency_error(dispL, dispR)
+        roi_depth, roi_dispL, roi_dispR = get_roi(depth, dispL, dispR)
+        rmse = depth_rmse(roi_depth, actual_depth)
+        noise = spatial_noise(roi_depth)
+        lr = median_lr_consistency_error(roi_dispL, roi_dispR)
         print(f"Depth RMSE: {rmse:.4f} m, Spatial Noise: {noise:.4f} m, Median LR Consistency Error: {lr:.2f} pixels")
+
         
-        # with open(f"calibration_results_{scale}.csv", "a") as f:
-        #     f.write(f"{folder_name},{valid_pairs},{baseline*100:.2f},{baseline_error*100:.2f},{stereo.retL:.2f},{stereo.retR:.2f},{stereo.stereo_ret:.2f},{rmse:.4f},{noise:.4f},{lr:.2f}\n")
+        with open(f"calibration_results_{scale}.csv", "a") as f:
+            f.write(f"{folder_name},{valid_pairs},{baseline*100:.2f},{baseline_error*100:.2f},{stereo.retL:.2f},{stereo.retR:.2f},{stereo.stereo_ret:.2f},{rmse:.4f},{noise:.4f},{lr:.2f}\n")
