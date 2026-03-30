@@ -10,13 +10,13 @@ import matplotlib.pyplot as plt
 class StereoClientDevice:
     def __init__(self, server_host='localhost', server_port=8080, calibrating = False, calibraton_params_file="calibration_params.npz"):
         self.client = ImageClient(server_host, server_port)
-        self.stereo = StereoSystem()
+        self.stereo = StereoSystem(block_size=3, num_disp=16*15)
         if not calibrating:
             self.stereo.load_calibration_parameters(calibraton_params_file)
         self.calibration_path = calibraton_params_file
         self.calibrating = calibrating  
     
-    def reconstruct(self, bytes, image_height=3040, image_width=4056, channels=4):
+    def reconstruct(self, bytes, image_height=2028, image_width=1520, channels=4):
         # always 4-channel RGBA
         expected = image_height * image_width * channels
         if len(bytes) != expected:
