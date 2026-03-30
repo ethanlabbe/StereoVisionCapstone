@@ -7,7 +7,7 @@ from performance import depth_rmse, spatial_noise, median_lr_consistency_error, 
 #from stereo_class import StereoSystem, CameraCalibration
 
 stereo = StereoSystem()
-calibrating = True
+calibrating = False
 images_folder = "C:\\repos\\images\\testing"
 depth_folder = "depth"
 
@@ -16,8 +16,8 @@ scales = [0.5, 1.0]
 
 for scale in scales:
     print(f"Processing images at scale: {scale}")
-    with open(f"calibration_results_{scale}.csv", "w") as f:
-        f.write("Folder,Pairs_Found,Baseline_cm,Baseline_Error_Percent,Left_Reprojection_Error_px,Right_Reprojection_Error_px,Stereo_Reprojection_Error_px,Depth_RMSE_m,Spatial_Noise_m,Median_LR_Consistency_Error_px\n")
+    # with open(f"calibration_results_{scale}.csv", "w") as f:
+    #     f.write("Folder,Pairs_Found,Baseline_cm,Baseline_Error_Percent,Left_Reprojection_Error_px,Right_Reprojection_Error_px,Stereo_Reprojection_Error_px,Depth_RMSE_m,Spatial_Noise_m,Median_LR_Consistency_Error_px\n")
 
     for folder in glob.glob(images_folder + "/*/"):
     #for folder in ["60mm", "65mm"]:
@@ -91,5 +91,5 @@ for scale in scales:
         print(f"Depth RMSE: {rmse:.4f} m, Spatial Noise: {noise:.4f} m, Median LR Consistency Error: {lr:.2f} pixels")
 
         
-        with open(f"calibration_results_{scale}.csv", "a") as f:
-            f.write(f"{folder_name},{valid_pairs},{baseline*100:.2f},{baseline_error*100:.2f},{stereo.retL:.2f},{stereo.retR:.2f},{stereo.stereo_ret:.2f},{rmse:.4f},{noise:.4f},{lr:.2f}\n")
+        # with open(f"calibration_results_{scale}.csv", "a") as f:
+        #     f.write(f"{folder_name},{valid_pairs},{baseline*100:.2f},{baseline_error*100:.2f},{stereo.retL:.2f},{stereo.retR:.2f},{stereo.stereo_ret:.2f},{rmse:.4f},{noise:.4f},{lr:.2f}\n")

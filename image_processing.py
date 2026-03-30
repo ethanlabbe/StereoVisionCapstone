@@ -6,19 +6,19 @@ from stereo_class_ethan import StereoSystem
 from performance import depth_rmse, spatial_noise, median_lr_consistency_error, get_roi
 #from stereo_class import StereoSystem, CameraCalibration
 
-stereo = StereoSystem(block_size=5)
+stereo = StereoSystem(block_size=3, num_disp=16*15)
 calibrating = False
-calib_file_path = "test_calib_65mm_0.5.npz"
+calib_file_path = "test_calib_60mm_0.5.npz"
 scale_factor = 0.5
 
 
 calib_right_images = sorted(glob.glob("C:\\repos\\images\\received_calibration\\5cm\\left_image*.png"))
 calib_left_images = sorted(glob.glob("C:\\repos\\images\\received_calibration\\5cm\\right_image*.png"))
 
-depth_img_R = cv2.imread(
-    "C:\\repos\\images\\testing\\65mm\\depth\\right_image_447840504366400.png")
 depth_img_L = cv2.imread(
-    "C:\\repos\\images\\testing\\65mm\\depth\\left_image_447840504366400.png")
+    "C:\\repos\\images\\testing\\60mm\\depth\\left_image_446889927989500.png")
+depth_img_R = cv2.imread(
+    "C:\\repos\\images\\testing\\60mm\\depth\\right_image_446889927989500.png")
 
 depth_img_L = cv2.resize(depth_img_L, (0, 0), fx=scale_factor, fy=scale_factor)
 depth_img_R = cv2.resize(depth_img_R, (0, 0), fx=scale_factor, fy=scale_factor)
@@ -61,7 +61,7 @@ dispL, dispL2, dispR = stereo.compute_disparity(rectified_L, rectified_R)
 # Pass dispL directly - disparity_to_depth handles masking internally
 #dispL_filtered = stereo.postprocess_disparity(dispL)
 depth = stereo.disparity_to_depth(dispL)
-stereo.visualize_depth_map(depth, title="Depth Map", vmin = 0.6,vmax= 0.9 , save_folder="C:\\repos\\images\\depth_maps\\")
+stereo.visualize_depth_map(depth, title="Depth Map", vmin = 0.6,vmax= 0.9)
 actual_depth = 0.6  # replace with actual depth if known for testing
 roi_depth, roi_dispL, roi_dispR = get_roi(depth, dispL, dispR)
 rmse = depth_rmse(roi_depth, actual_depth)
