@@ -37,7 +37,7 @@ class StereoCameraAcquisition:
     def start(self):
         self.left_camera.start()
         self.right_camera.start()
-        time.sleep(2)  # Allow cameras to warm up
+#        time.sleep(2)  # Allow cameras to warm up
         
     def initialize_cameras(self):
         self.stop()
