@@ -22,6 +22,7 @@ class StereoCameraAcquisition:
     def connect_cameras(self, camera_id=None):
         """Connect to cameras ensuring they are in the correct left/right order"""
         available_cameras = Picamera2.global_camera_info()
+        print(available_cameras)
         for idx, cam in enumerate(available_cameras):
             if 'Id' in cam:
                 if cam['Id'] == LEFT_CAMERA_ID:
