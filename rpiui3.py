@@ -227,11 +227,11 @@ class RaspberryPiStereoSystem:
             depth_color = cv2.applyColorMap(norm_depth, cv2.COLORMAP_JET)
             depth_color[~valid_mask] = [0, 0, 0] # Make invalid pixels black
             
-            # Draw Color Bar
+            # Draw Color Bar on LEFT side
             h, w = depth_color.shape[:2]
-            cb_w = max(20, int(w * 0.03))
+            cb_w = max(30, int(w * 0.04)) # Made bar slightly thicker
             cb_h = int(h * 0.6)
-            cb_x = w - cb_w - 20
+            cb_x = 20 # 20 pixels from the left edge
             cb_y = (h - cb_h) // 2
 
             gradient = np.linspace(255, 0, cb_h, dtype=np.uint8)
@@ -239,14 +239,16 @@ class RaspberryPiStereoSystem:
             gradient_col = cv2.applyColorMap(gradient, cv2.COLORMAP_JET)
 
             depth_color[cb_y:cb_y+cb_h, cb_x:cb_x+cb_w] = gradient_col
-            cv2.rectangle(depth_color, (cb_x, cb_y), (cb_x + cb_w, cb_y + cb_h), (255, 255, 255), 1)
+            cv2.rectangle(depth_color, (cb_x, cb_y), (cb_x + cb_w, cb_y + cb_h), (255, 255, 255), 2)
 
-            # Draw labels using calculated dynamic bounds
-            font, scale, thick = cv2.FONT_HERSHEY_SIMPLEX, 0.6, 2
-            for val, y_pos in [(vmax_val, cb_y + 15), (vmin_val, cb_y + cb_h)]:
-                text = f"{val:.2f}"
-                cv2.putText(depth_color, text, (cb_x - 70, y_pos), font, scale, (0, 0, 0), thick + 1)
-                cv2.putText(depth_color, text, (cb_x - 70, y_pos), font, scale, (255, 255, 255), thick)
+            # Draw labels using calculated dynamic bounds to the right of the colorbar
+            font, scale, thick = cv2.FONT_HERSHEY_SIMPLEX, 1.2, 3
+            text_x = cb_x + cb_w + 15 # Padding next to the bar
+            
+            for val, y_pos in [(vmax_val, cb_y + 25), (vmin_val, cb_y + cb_h)]:
+                text = f"{val:.2f}m"
+                cv2.putText(depth_color, text, (text_x, y_pos), font, scale, (0, 0, 0), thick + 1)
+                cv2.putText(depth_color, text, (text_x, y_pos), font, scale, (255, 255, 255), thick)
 
             self.signals.show_depth_map.emit(depth_color)
             
@@ -341,7 +343,7 @@ class RaspberryPiStereoSystem:
         
         lbl = QLabel(label_text)
         lbl.setStyleSheet("color: white; font-size: 16px; font-weight: bold;")
-        lbl.setFixedWidth(75) # widened slightly for (%)
+        lbl.setFixedWidth(75) 
         
         val_lbl = QLabel(str(float(default_v)))
         val_lbl.setStyleSheet("color: #4CAF50; font-size: 16px; font-weight: bold;")
