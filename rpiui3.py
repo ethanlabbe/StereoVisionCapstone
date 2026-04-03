@@ -21,6 +21,7 @@ BTN_STYLE_LG = "background-color: #2b2b2b; color: #ffffff; border: 2px solid #55
 
 class TransmissionSignals(QObject):
     update_text = pyqtSignal(str)
+    update_lights = pyqtSignal(bool, bool, bool, bool)
 
 class RaspberryPiStereoSystem:
     def __init__(self):
@@ -32,11 +33,27 @@ class RaspberryPiStereoSystem:
         self.folder_path=""
         self.img_number = 0
         self.last_tx_msg = "Idle"
+        
+        # State variables for status lights
+        self.is_capturing = False
+        self.is_transferring = False
 
         self.signals = TransmissionSignals()
         self.signals.update_text.connect(self._update_label_safe)
-        self.server.on_send_start = lambda: self._set_tx_msg(f"Sending #{self.img_number}...")
-        self.server.on_send_complete = lambda: self._set_tx_msg(f"Sent #{self.img_number}")
+        self.signals.update_lights.connect(self._update_lights_safe)
+        
+        self.server.on_send_start = self._handle_send_start
+        self.server.on_send_complete = self._handle_send_complete
+
+    def _handle_send_start(self):
+        self.is_transferring = True
+        self._set_tx_msg(f"Sending #{self.img_number}...")
+        self.emit_lights_update()
+
+    def _handle_send_complete(self):
+        self.is_transferring = False
+        self._set_tx_msg(f"Sent #{self.img_number}")
+        self.emit_lights_update()
 
     def _set_tx_msg(self, msg):
         self.last_tx_msg = msg
@@ -46,16 +63,31 @@ class RaspberryPiStereoSystem:
         self.transmission_info.setText(text)
         self.transmission_info.parent().update(self.transmission_info.geometry())
 
+    def _update_lights_safe(self, server_on, client_on, capture_on, transfer_on):
+        green = "background-color: #4CAF50; border-radius: 10px; border: 2px solid #222;"
+        red = "background-color: #F44336; border-radius: 10px; border: 2px solid #222;"
+        gray = "background-color: #555555; border-radius: 10px; border: 2px solid #222;"
+        yellow = "background-color: #FFC107; border-radius: 10px; border: 2px solid #222;"
+        blue = "background-color: #2196F3; border-radius: 10px; border: 2px solid #222;"
+
+        self.led_server.setStyleSheet(green if server_on else red)
+        self.led_client.setStyleSheet(green if client_on else red)
+        self.led_capture.setStyleSheet(yellow if capture_on else gray)
+        self.led_transfer.setStyleSheet(blue if transfer_on else gray)
+
+    def emit_lights_update(self):
+        server_status = getattr(self.server, '_running', False)
+        client_status = getattr(self.server, 'connected', False)
+        self.signals.update_lights.emit(server_status, client_status, self.is_capturing, self.is_transferring)
+
     def update_transmission_status(self):
         client_status = "Connected" if getattr(self.server, 'connected', False) else "Disconnected"
         server_status = "Running" if getattr(self.server, '_running', False) else "Stopped"
         
-        # Formatted for vertical sidebar
-        text = (f"Transmission Info\n\n"
-                f"Server Status:\n  {server_status}\n\n"
-                f"Client Status:\n  {client_status}\n\n"
-                f"Last Action:\n  {self.last_tx_msg}")
+        # Flush horizontal text
+        text = f"  Server: {server_status}   |   Client: {client_status}   |   Action: {self.last_tx_msg}"
         self.signals.update_text.emit(text)
+        self.emit_lights_update()
 
     def save_images_locally(self, left_image, right_image, left_filename="left_image.jpg", right_filename="right_image.jpg", folder="simonspi/Desktop/images"):
         time_stamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -89,9 +121,15 @@ class RaspberryPiStereoSystem:
         capture_thread.start()
 
     def _do_capture(self):
+        self.is_capturing = True
+        self.emit_lights_update()
+        
         imgL, imgR = self.stereo_system.capture_stereo_image()
         self.img_number += 1
         current_id = self.img_number 
+        
+        self.is_capturing = False
+        self.emit_lights_update()
 
         if self.server.connected:
             try:
@@ -123,6 +161,7 @@ class RaspberryPiStereoSystem:
             self.toggle_settings() # ensure settings menu is closed
             
         self.transmission_info.hide()
+        self.status_panel.hide()
         self.capture_button.hide()
         self.settings_button.hide()
         self.qpicamera2.hide()
@@ -180,11 +219,10 @@ class RaspberryPiStereoSystem:
         self.close_settings_btn.setFixedSize(150, 40)
         self.close_settings_btn.move(100, 410)
 
-        # Vertical transmission info sidebar
-        self.transmission_info = QLabel("Transmission Info: N/A", parent=self.central_widget)
-        self.transmission_info.setStyleSheet("background-color: rgba(18, 18, 18, 200); color: #4CAF50; font-size: 14px; font-weight: bold; border-right: 2px solid #4CAF50; padding: 15px;")
-        self.transmission_info.setAlignment(Qt.AlignTop | Qt.AlignLeft)
-        self.transmission_info.setFixedSize(220, UI_HEIGHT)
+        # Horizontal transmission info header (hidden by default)
+        self.transmission_info = QLabel("  Transmission Info: N/A", parent=self.central_widget)
+        self.transmission_info.setStyleSheet("background-color: rgba(18, 18, 18, 200); color: #4CAF50; font-size: 14px; font-weight: bold; border-bottom: 2px solid #4CAF50;")
+        self.transmission_info.setFixedSize(UI_WIDTH, 35)
         self.transmission_info.move(0, 0) 
         self.transmission_info.hide() 
 
@@ -193,9 +231,31 @@ class RaspberryPiStereoSystem:
             self.settings_panel.hide()
             self.capture_button.show()
         else:
-            self.settings_panel.raise_() # Forces the settings panel to be on top of everything
+            self.settings_panel.raise_() 
             self.settings_panel.show()
             self.capture_button.hide()
+
+    def init_status_lights(self):
+        self.status_panel = QWidget(self.central_widget)
+        self.status_panel.setGeometry(10, 45, 180, 160)
+        self.status_panel.setStyleSheet("background-color: rgba(18, 18, 18, 150); border-radius: 10px;")
+        
+        def create_indicator(y_pos, text):
+            led = QLabel(self.status_panel)
+            led.setGeometry(10, y_pos, 20, 20)
+            led.setStyleSheet("background-color: #555555; border-radius: 10px; border: 2px solid #222;")
+            
+            lbl = QLabel(text, self.status_panel)
+            lbl.setGeometry(40, y_pos, 130, 20)
+            lbl.setStyleSheet("color: white; font-size: 14px; font-weight: bold; background: transparent;")
+            return led
+            
+        self.led_server = create_indicator(15, "Server Status")
+        self.led_client = create_indicator(50, "Client Link")
+        self.led_capture = create_indicator(85, "Capturing")
+        self.led_transfer = create_indicator(120, "Transferring")
+        
+        self.status_panel.hide()
 
     def init_capture_ui(self):
         self.qpicamera2 = QGlPicamera2(self.stereo_system.left_camera, width=UI_WIDTH, height=UI_HEIGHT, keep_ar=True)
@@ -204,6 +264,8 @@ class RaspberryPiStereoSystem:
         self.qpicamera2.setParent(self.central_widget)
         self.qpicamera2.setGeometry(0, 0, UI_WIDTH, UI_HEIGHT)
         self.qpicamera2.hide() 
+
+        self.init_status_lights()
 
         self.capture_button = QPushButton(text="Capture", parent=None)
         self.capture_button.clicked.connect(self.image_capture)
@@ -220,7 +282,7 @@ class RaspberryPiStereoSystem:
         self.settings_button.setIconSize(QSize(30, 30))
         self.settings_button.setFixedSize(50, 50)
         self.settings_button.setParent(self.central_widget)
-        self.settings_button.move(UI_WIDTH - 70, 20) 
+        self.settings_button.move(UI_WIDTH - 70, 45) 
         self.settings_button.hide() 
 
     def calibration_ui(self):
@@ -242,8 +304,10 @@ class RaspberryPiStereoSystem:
         self.settings_button.raise_()
         self.settings_button.show()
         
-        self.transmission_info.raise_()
-        self.transmission_info.show() # Transmission info on by default
+        self.status_panel.raise_()
+        self.status_panel.show()
+        
+        self.transmission_info.hide() # Hidden by default per request
 
     def UI_start(self):
         self.app = QApplication(sys.argv)
@@ -255,13 +319,11 @@ class RaspberryPiStereoSystem:
         self.central_widget.setStyleSheet("background-color: #121212;")
         rpiUI.setCentralWidget(self.central_widget)
 
-        # Placed at the top so it renders at the bottom of the Z-index stack
         self.logo_label = QLabel(self.central_widget)
         self.logo_label.setPixmap(QPixmap("UI/stereo_vision_logo.png"))
         self.logo_label.setAlignment(Qt.AlignCenter)
         self.logo_label.setGeometry(int((UI_WIDTH - 600)/2), 20, 600, 350)
 
-        # 3 Start screen buttons arranged horizontally (smaller and lower)
         btn_width = 200
         btn_height = 60
         spacing = 30
@@ -295,7 +357,6 @@ class RaspberryPiStereoSystem:
         self.init_capture_ui()
         self.init_settingui()
 
-        # Timer to continuously fetch connection status and update the info panel
         self.status_timer = QTimer(self.central_widget)
         self.status_timer.timeout.connect(self.update_transmission_status)
         self.status_timer.start(1000)
