@@ -272,16 +272,24 @@ if __name__ == "__main__":
                     control_input = input("sendimages to client? (y/n): ")
                     if control_input.lower() == 'y':
                         #load files from popup dialog to send
-                        left_image = None
-                        right_image = None
-                        with open("C:\\Users\\Ethan\\OneDrive\\Desktop\\Labs\\5th year\\Capstone\\left_20260228_214325.jpg", 'rb') as fL:
-                            left_image = fL.read()
-                        with open("C:\\Users\\Ethan\\OneDrive\\Desktop\\Labs\\5th year\\Capstone\\right_20260228_214325.jpg", 'rb') as fR:
-                            right_image = fR.read()
+                        import cv2
+                        import numpy as np
+                        left_path = "C:\\repos\\images\\received_depth\\60mm_depth\\left_image_1048612150715100.png"
+                        right_path = "C:\\repos\\images\\received_depth\\60mm_depth\\right_image_1048612150715100.png"
+                        # Read with OpenCV (BGR)
+                        left_img = cv2.imread(left_path, cv2.IMREAD_UNCHANGED)
+                        right_img = cv2.imread(right_path, cv2.IMREAD_UNCHANGED)
+                        # Ensure both are 4 channels (BGRA)
+                        if left_img is not None and left_img.shape[2] == 3:
+                            left_img = cv2.cvtColor(left_img, cv2.COLOR_BGR2BGRA)
+                        if right_img is not None and right_img.shape[2] == 3:
+                            right_img = cv2.cvtColor(right_img, cv2.COLOR_BGR2BGRA)
+                        # Convert BGRA to RGBA
+                        left_img = cv2.cvtColor(left_img, cv2.COLOR_BGRA2RGBA)
+                        right_img = cv2.cvtColor(right_img, cv2.COLOR_BGRA2RGBA)
+                        # Send as raw bytes
                         try:
-                            for i in range(5):
-                                print(f"Queueing image set {i+1} for transfer...")
-                                server.send_images(left_image, right_image)
+                            server.send_images(left_img.tobytes(), right_img.tobytes())
                         except ConnectionError:
                             print("No client connected to send images")
                     elif control_input.lower() == 'n':
