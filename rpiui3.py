@@ -156,7 +156,7 @@ class RaspberryPiStereoSystem:
         self.current_mode = None
             
         if self.settings_panel.isVisible():
-            self.toggle_settings() # ensure settings menu is closed
+            self.settings_panel.hide()
             
         self.status_panel.hide()
         self.capture_button.hide()
@@ -170,6 +170,9 @@ class RaspberryPiStereoSystem:
         self.start_capture_btn.show()
         self.run_locally_btn.show()
         self.quit_button.show()
+        
+        # Force a full repaint to clear any transparent rendering artifacts
+        self.central_widget.repaint()
 
     def real_quitting(self):
         self.stereo_system.stop()
@@ -217,6 +220,8 @@ class RaspberryPiStereoSystem:
         if self.settings_panel.isVisible():
             self.settings_panel.hide()
             self.capture_button.show()
+            # Force UI to redraw cleanly behind the transparent panel
+            self.central_widget.repaint() 
         else:
             # Sync the server button text in case it changed while settings were closed
             self.server_button.setText("Stop Server" if getattr(self.server, '_running', False) else "Start Server")
