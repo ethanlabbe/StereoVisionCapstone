@@ -64,11 +64,12 @@ class RaspberryPiStereoSystem:
         self.transmission_info.parent().update(self.transmission_info.geometry())
 
     def _update_lights_safe(self, server_on, client_on, capture_on, transfer_on):
-        green = "background-color: #4CAF50; border-radius: 10px; border: 2px solid #222;"
-        red = "background-color: #F44336; border-radius: 10px; border: 2px solid #222;"
-        gray = "background-color: #555555; border-radius: 10px; border: 2px solid #222;"
-        yellow = "background-color: #FFC107; border-radius: 10px; border: 2px solid #222;"
-        blue = "background-color: #2196F3; border-radius: 10px; border: 2px solid #222;"
+        # Border radius changed to 7px to maintain perfect circles on 14x14px LEDs
+        green = "background-color: #4CAF50; border-radius: 7px; border: 1px solid #222;"
+        red = "background-color: #F44336; border-radius: 7px; border: 1px solid #222;"
+        gray = "background-color: #555555; border-radius: 7px; border: 1px solid #222;"
+        yellow = "background-color: #FFC107; border-radius: 7px; border: 1px solid #222;"
+        blue = "background-color: #2196F3; border-radius: 7px; border: 1px solid #222;"
 
         self.led_server.setStyleSheet(green if server_on else red)
         self.led_client.setStyleSheet(green if client_on else red)
@@ -237,23 +238,26 @@ class RaspberryPiStereoSystem:
 
     def init_status_lights(self):
         self.status_panel = QWidget(self.central_widget)
-        self.status_panel.setGeometry(10, 45, 180, 160)
-        self.status_panel.setStyleSheet("background-color: rgba(18, 18, 18, 150); border-radius: 10px;")
+        # Scaled down size to about 2/3 (120x110)
+        self.status_panel.setGeometry(10, 45, 120, 110)
+        self.status_panel.setStyleSheet("background-color: transparent;")
         
         def create_indicator(y_pos, text):
             led = QLabel(self.status_panel)
-            led.setGeometry(10, y_pos, 20, 20)
-            led.setStyleSheet("background-color: #555555; border-radius: 10px; border: 2px solid #222;")
+            # Smaller 14x14px LEDs
+            led.setGeometry(5, y_pos, 14, 14)
+            led.setStyleSheet("background-color: #555555; border-radius: 7px; border: 1px solid #222;")
             
             lbl = QLabel(text, self.status_panel)
-            lbl.setGeometry(40, y_pos, 130, 20)
-            lbl.setStyleSheet("color: white; font-size: 14px; font-weight: bold; background: transparent;")
+            # Adjusted Y to perfectly center the text with the new LED size, smaller 10px font
+            lbl.setGeometry(25, y_pos - 3, 90, 20)
+            lbl.setStyleSheet("color: white; font-size: 10px; font-weight: bold; background: transparent;")
             return led
             
-        self.led_server = create_indicator(15, "Server Status")
-        self.led_client = create_indicator(50, "Client Link")
-        self.led_capture = create_indicator(85, "Capturing")
-        self.led_transfer = create_indicator(120, "Transferring")
+        self.led_server = create_indicator(10, "Server Status")
+        self.led_client = create_indicator(35, "Client Link")
+        self.led_capture = create_indicator(60, "Capturing")
+        self.led_transfer = create_indicator(85, "Transferring")
         
         self.status_panel.hide()
 
