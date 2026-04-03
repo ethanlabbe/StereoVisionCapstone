@@ -15,23 +15,21 @@ scale_factor = 0.5
 calib_right_images = sorted(glob.glob("C:\\repos\\images\\received_calibration\\5cm\\left_image*.png"))
 calib_left_images = sorted(glob.glob("C:\\repos\\images\\received_calibration\\5cm\\right_image*.png"))
 
-depth_L_path = "C:\\repos\\images\\testing\\60mm\\depth\\left_image_446889927989500.png"
-depth_R_path = "C:\\repos\\images\\testing\\60mm\\depth\\right_image_446889927989500.png"
+depth_L_path = "C:\\repos\\images\\testing\\60mm\\left_image_445935019585000.png"
+depth_R_path = "C:\\repos\\images\\testing\\60mm\\right_image_445935019585000.png"
 
 depth_img_L = cv2.imread(depth_L_path)
 depth_img_R = cv2.imread(depth_R_path)
 
 depth_img_L = cv2.resize(depth_img_L, (0, 0), fx=scale_factor, fy=scale_factor)
 depth_img_R = cv2.resize(depth_img_R, (0, 0), fx=scale_factor, fy=scale_factor)
-with open(f"validation_results.csv", "w") as f:
-    f.write("Image_Path, Block_Size,Num_Disparities,Depth_RMSE_m,Spatial_Noise_m,Median_LR_Consistency_Error_px\n")
 
 for block_size in [3, 5, 7]:
-    for num_disp in [16*10, 16*12, 16*13, 16*14, 16*15, 16*20]:
+    for wls_lambda in [0, 500, 800]:
         with open(f"validation_results.csv", "a") as f:
-            f.write(f"{depth_L_path},{block_size},{num_disp},")
-        print(f"Testing block size {block_size} and num_disp {num_disp}")
-        stereo = StereoSystem(block_size=block_size, num_disp=num_disp)
+            f.write(f"{depth_L_path},{block_size},{wls_lambda},")
+        print(f"Testing block size {block_size} and wls_lambda {wls_lambda}")
+        stereo = StereoSystem(block_size=block_size, num_disp=16*15, wls_lambda=wls_lambda)
         if calibrating:
             # Add chessboard corners (only valid pairs)
             valid_pairs = 0
@@ -105,7 +103,7 @@ for block_size in [3, 5, 7]:
         # Pass dispL directly - disparity_to_depth handles masking internally
         #dispL_filtered = stereo.postprocess_disparity(dispL)
         depth = stereo.disparity_to_depth(dispL)
-        #stereo.visualize_depth_map(depth, title="Depth Map", vmin = 0.6,vmax= 0.9)
+        stereo.visualize_depth_map(depth, title="Depth Map", vmin = 0.2,vmax= 1)
         actual_depth = 0.6  # replace with actual depth if known for testing
         # roi_depth, roi_dispL, roi_dispR = get_roi(depth, dispL, dispR)
         x = 752

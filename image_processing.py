@@ -6,22 +6,20 @@ from stereo_class_ethan import StereoSystem
 from performance import depth_rmse, spatial_noise, median_lr_consistency_error, get_roi
 #from stereo_class import StereoSystem, CameraCalibration
 
-stereo = StereoSystem(block_size=3, num_disp=16*15)
+stereo = StereoSystem(block_size=5, num_disp=16*20, wls_lambda=1000)
 calibrating = False
-calib_file_path = "test_calib_60mm_0.5.npz"
-scale_factor = 0.5
+calib_file_path = "calib_60mm_0.5.npz"
+# scale_factor = 0.5
 
 
-calib_right_images = sorted(glob.glob("C:\\repos\\images\\received_calibration\\5cm\\left_image*.png"))
-calib_left_images = sorted(glob.glob("C:\\repos\\images\\received_calibration\\5cm\\right_image*.png"))
+calib_right_images = sorted(glob.glob("C:\\repos\\images\\received_calibration\\60mm\\left_image*.png"))
+calib_left_images = sorted(glob.glob("C:\\repos\\images\\received_calibration\\60mm\\right_image*.png"))
 
-depth_img_L = cv2.imread(
-    "C:\\repos\\images\\testing\\60mm\\depth\\left_image_446889927989500.png")
-depth_img_R = cv2.imread(
-    "C:\\repos\\images\\testing\\60mm\\depth\\right_image_446889927989500.png")
+depth_img_L = cv2.imread("C:\\repos\\images\\received_depth\\60mm_depth\\left_image_1048612150715100.png")
+depth_img_R = cv2.imread("C:\\repos\\images\\received_depth\\60mm_depth\\right_image_1048612150715100.png")
 
-depth_img_L = cv2.resize(depth_img_L, (0, 0), fx=scale_factor, fy=scale_factor)
-depth_img_R = cv2.resize(depth_img_R, (0, 0), fx=scale_factor, fy=scale_factor)
+# depth_img_L = cv2.resize(depth_img_L, (0, 0), fx=scale_factor, fy=scale_factor)
+# depth_img_R = cv2.resize(depth_img_R, (0, 0), fx=scale_factor, fy=scale_factor)
 
 if calibrating:
     # Add chessboard corners (only valid pairs)
@@ -61,10 +59,11 @@ dispL, dispL2, dispR = stereo.compute_disparity(rectified_L, rectified_R)
 # Pass dispL directly - disparity_to_depth handles masking internally
 #dispL_filtered = stereo.postprocess_disparity(dispL)
 depth = stereo.disparity_to_depth(dispL)
-stereo.visualize_depth_map(depth, title="Depth Map", vmin = 0.6,vmax= 0.9)
-actual_depth = 0.6  # replace with actual depth if known for testing
-roi_depth, roi_dispL, roi_dispR = get_roi(depth, dispL, dispR)
-rmse = depth_rmse(roi_depth, actual_depth)
-noise = spatial_noise(roi_depth)
-lr = median_lr_consistency_error(roi_dispL, roi_dispR)
-print(f"Depth RMSE: {rmse:.4f} m, Spatial Noise: {noise:.4f} m, Median LR Consistency Error: {lr:.2f} pixels")
+stereo.visualize_depth_map(depth, title="Depth Map")
+actual_depth = input("Enter actual depth for performance metrics (or press Enter to skip): ")
+if actual_depth:
+    roi_depth, roi_dispL, roi_dispR = get_roi(depth, dispL, dispR)
+    rmse = depth_rmse(roi_depth, actual_depth)
+    noise = spatial_noise(roi_depth)
+    lr = median_lr_consistency_error(roi_dispL, roi_dispR)
+    print(f"Depth RMSE: {rmse*1000:.4f} mm, Spatial Noise: {noise*1000:.4f} mm, Median LR Consistency Error: {lr:.2f} pixels")
