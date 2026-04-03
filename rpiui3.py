@@ -10,7 +10,7 @@ import netifaces
 import sys
 from PyQt5.QtWidgets import QApplication, QMainWindow, QPushButton, QGridLayout, QWidget, QLabel
 from PyQt5.QtCore import Qt, QSize, QObject, pyqtSignal, QTimer
-from PyQt5.QtGui import QIcon
+from PyQt5.QtGui import QIcon, QPixmap
 from picamera2.previews.qt import QGlPicamera2
 
 UI_HEIGHT=600
@@ -49,7 +49,7 @@ class RaspberryPiStereoSystem:
     def update_transmission_status(self):
         client_status = "Connected" if getattr(self.server, 'connected', False) else "Disconnected"
         server_status = "Running" if getattr(self.server, '_running', False) else "Stopped"
-        text = f"Server: {server_status} | Client: {client_status} | Action: {self.last_tx_msg}"
+        text = f"  Server: {server_status}   |   Client: {client_status}   |   Action: {self.last_tx_msg}"
         self.signals.update_text.emit(text)
 
     def save_images_locally(self, left_image, right_image, left_filename="left_image.jpg", right_filename="right_image.jpg", folder="simonspi/Desktop/images"):
@@ -113,15 +113,15 @@ class RaspberryPiStereoSystem:
     def fake_quitting(self):
         self.stereo_system.stop()
         self.server.stop_server()
-        if self.ip_label.isVisible():
+        if self.settings_panel.isVisible():
             self.toggle_settings() # ensure settings menu is closed
             
         self.transmission_info.hide()
         self.capture_button.hide()
-        self.server_button.hide()
         self.settings_button.hide()
         self.qpicamera2.hide()
 
+        self.logo_label.show()
         self.calibrate_btn.show()
         self.start_capture_btn.show()
         self.run_locally_btn.show()
@@ -131,67 +131,56 @@ class RaspberryPiStereoSystem:
         self.app.quit()
 
     def init_settingui(self):
-        self.ip_label = QLabel(f"IP: {self.ipaddress}", parent=None)
+        # Settings Dropdown Panel Background
+        self.settings_panel = QWidget(self.central_widget)
+        self.settings_panel.setObjectName("settingsPanel")
+        self.settings_panel.setStyleSheet("QWidget#settingsPanel { background-color: rgba(25, 25, 25, 230); border: 2px solid #555555; border-radius: 15px; }")
+        self.settings_panel.setGeometry(int((UI_WIDTH-350)/2), 80, 350, 420)
+        self.settings_panel.hide()
+
+        self.ip_label = QLabel(f"IP: {self.ipaddress}", parent=self.settings_panel)
         self.ip_label.setStyleSheet(BTN_STYLE)
         self.ip_label.setAlignment(Qt.AlignCenter)
         self.ip_label.setFixedSize(250, 60)
-        self.ip_label.setParent(self.central_widget)
-        self.ip_label.move(int((UI_WIDTH-250)/2), 20)
-        self.ip_label.hide() 
+        self.ip_label.move(50, 20) 
 
-        self.fps_select = QPushButton(text="Change FPS", parent=None)
+        self.fps_select = QPushButton(text="Change FPS", parent=self.settings_panel)
         self.fps_select.clicked.connect(self.change_fps)
         self.fps_select.setStyleSheet(BTN_STYLE)
         self.fps_select.setFixedSize(250, 60)
-        self.fps_select.setParent(self.central_widget)
-        self.fps_select.move(int((UI_WIDTH-250)/2), 100)
-        self.fps_select.hide() 
+        self.fps_select.move(50, 100)
 
-        self.show_transmission_info = QPushButton(text="Toggle Transmission Info", parent=None)
+        self.show_transmission_info = QPushButton(text="Toggle Transmission Info", parent=self.settings_panel)
         self.show_transmission_info.clicked.connect(self.toggle_transmission_info)
         self.show_transmission_info.setStyleSheet(BTN_STYLE)
         self.show_transmission_info.setFixedSize(250, 60)
-        self.show_transmission_info.setParent(self.central_widget)
-        self.show_transmission_info.move(int((UI_WIDTH-250)/2), 180)
-        self.show_transmission_info.hide() 
+        self.show_transmission_info.move(50, 180)
         
-        self.server_button = QPushButton(text="Start Server", parent=None)
+        self.server_button = QPushButton(text="Start Server", parent=self.settings_panel)
         self.server_button.clicked.connect(self.toggle_server)
         self.server_button.setStyleSheet(BTN_STYLE)
-        self.server_button.setParent(self.central_widget)
         self.server_button.setFixedSize(250, 60)
-        self.server_button.move(int((UI_WIDTH-250)/2), 260) 
-        self.server_button.hide() 
+        self.server_button.move(50, 260) 
 
-        self.capture_quit_button = QPushButton(text="Back to Start", parent=None)
+        self.capture_quit_button = QPushButton(text="Back to Start", parent=self.settings_panel)
         self.capture_quit_button.clicked.connect(self.fake_quitting)
         self.capture_quit_button.setStyleSheet(BTN_STYLE)
         self.capture_quit_button.setFixedSize(150, 50)
-        self.capture_quit_button.setParent(self.central_widget)
-        self.capture_quit_button.move(int((UI_WIDTH-150)/2), UI_HEIGHT - 70) 
-        self.capture_quit_button.hide() 
+        self.capture_quit_button.move(100, 340) 
 
-        self.transmission_info = QLabel("Transmission Info: N/A", parent=None)
-        self.transmission_info.setStyleSheet("background-color: #1e1e1e; color: #4CAF50; border: 1px solid #4CAF50; border-radius: 5px; font-size: 14px; font-weight: bold; padding: 5px;")
-        self.transmission_info.setFixedSize(450, 40)
-        self.transmission_info.setParent(self.central_widget)
-        self.transmission_info.move(20,20) 
+        # Flush transmission info bar
+        self.transmission_info = QLabel("  Transmission Info: N/A", parent=self.central_widget)
+        self.transmission_info.setStyleSheet("background-color: rgba(18, 18, 18, 200); color: #4CAF50; font-size: 14px; font-weight: bold; border-bottom: 2px solid #4CAF50;")
+        self.transmission_info.setFixedSize(UI_WIDTH, 35)
+        self.transmission_info.move(0, 0) 
         self.transmission_info.hide() 
 
     def toggle_settings(self):
-        if self.ip_label.isVisible():
-            self.ip_label.hide()
-            self.fps_select.hide()
-            self.show_transmission_info.hide()
-            self.server_button.hide()
-            self.capture_quit_button.hide()
+        if self.settings_panel.isVisible():
+            self.settings_panel.hide()
             self.capture_button.show()
         else:
-            self.ip_label.show()
-            self.fps_select.show()
-            self.show_transmission_info.show()
-            self.server_button.show()
-            self.capture_quit_button.show()
+            self.settings_panel.show()
             self.capture_button.hide()
 
     def init_capture_ui(self):
@@ -212,12 +201,12 @@ class RaspberryPiStereoSystem:
 
         self.settings_button = QPushButton(parent=None)
         self.settings_button.clicked.connect(self.toggle_settings)
-        self.settings_button.setStyleSheet("background-color: #2b2b2b; color: white; border: 2px solid #555555; border-radius: 25px;")
-        self.settings_button.setIcon(QIcon("gear.png"))
+        self.settings_button.setStyleSheet("background-color: #2b2b2b; border: 2px solid #555555; border-radius: 25px;")
+        self.settings_button.setIcon(QIcon("UI/gear.png"))
         self.settings_button.setIconSize(QSize(30, 30))
         self.settings_button.setFixedSize(50, 50)
         self.settings_button.setParent(self.central_widget)
-        self.settings_button.move(UI_WIDTH - 70, 20)
+        self.settings_button.move(UI_WIDTH - 70, 45) # Lowered slightly to account for flush header
         self.settings_button.hide() 
 
     def calibration_ui(self):
@@ -227,13 +216,16 @@ class RaspberryPiStereoSystem:
         print("Run locally button clicked - functionality not implemented yet")
 
     def capture_ui(self):
-        self.qpicamera2.show() 
-        self.capture_button.show()
-        self.settings_button.show()
+        self.logo_label.hide()
         self.calibrate_btn.hide()
         self.start_capture_btn.hide()
         self.run_locally_btn.hide()
         self.quit_button.hide()
+
+        self.qpicamera2.show() 
+        self.capture_button.show()
+        self.settings_button.show()
+        self.transmission_info.show() # Transmission info on by default
 
     def UI_start(self):
         self.app = QApplication(sys.argv)
@@ -242,34 +234,41 @@ class RaspberryPiStereoSystem:
         rpiUI.setGeometry(0, 0, UI_WIDTH, UI_HEIGHT)
 
         self.central_widget = QWidget()
-        self.central_widget.setStyleSheet("background-color: #121212;") # Global Dark Mode Background
+        self.central_widget.setStyleSheet("background-color: #121212;")
         rpiUI.setCentralWidget(self.central_widget)
+
+        # Logo above buttons
+        self.logo_label = QLabel(self.central_widget)
+        self.logo_label.setPixmap(QPixmap("UI/stereo_vision_logo.png"))
+        self.logo_label.setAlignment(Qt.AlignCenter)
+        self.logo_label.setGeometry(int((UI_WIDTH - 600)/2), 40, 600, 200)
 
         # 3 Start screen buttons arranged horizontally
         btn_width = 250
         spacing = 40
         start_x = int((UI_WIDTH - (3*btn_width + 2*spacing)) / 2)
+        btn_y = 300 # Lowered slightly to give the logo breathing room
 
         self.calibrate_btn = QPushButton(text="Start Calibration", parent=None)
         self.calibrate_btn.clicked.connect(self.calibration_ui)
         self.calibrate_btn.setStyleSheet(BTN_STYLE_LG)
         self.calibrate_btn.setFixedSize(btn_width, 100)
         self.calibrate_btn.setParent(self.central_widget)
-        self.calibrate_btn.move(start_x, int((UI_HEIGHT-100)/2))
+        self.calibrate_btn.move(start_x, btn_y)
 
         self.start_capture_btn = QPushButton(text="Start Capture", parent=None)
         self.start_capture_btn.clicked.connect(self.capture_ui)
         self.start_capture_btn.setStyleSheet(BTN_STYLE_LG)
         self.start_capture_btn.setFixedSize(btn_width, 100)
         self.start_capture_btn.setParent(self.central_widget)
-        self.start_capture_btn.move(start_x + btn_width + spacing, int((UI_HEIGHT-100)/2)) 
+        self.start_capture_btn.move(start_x + btn_width + spacing, btn_y) 
 
         self.run_locally_btn = QPushButton(text="Run Locally", parent=None)
         self.run_locally_btn.clicked.connect(self.run_locally)
         self.run_locally_btn.setStyleSheet(BTN_STYLE_LG)
         self.run_locally_btn.setFixedSize(btn_width, 100)
         self.run_locally_btn.setParent(self.central_widget)
-        self.run_locally_btn.move(start_x + 2*(btn_width + spacing), int((UI_HEIGHT-100)/2))
+        self.run_locally_btn.move(start_x + 2*(btn_width + spacing), btn_y)
 
         self.quit_button = QPushButton(text="Exit", parent=None)
         self.quit_button.clicked.connect(self.real_quitting)
