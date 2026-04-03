@@ -1,6 +1,6 @@
 from image_transfer import ImageClient
 from stereo_class_ethan import StereoSystem
-from performance import depth_rmse, spatial_noise, median_lr_consistency_error
+from performance import depth_rmse, spatial_noise, median_lr_consistency_error, get_roi
 import numpy as np
 import cv2
 import glob 
@@ -16,7 +16,7 @@ class StereoClientDevice:
         self.calibration_path = calibraton_params_file
         self.calibrating = calibrating  
     
-    def reconstruct(self, bytes, image_height=2028, image_width=1520, channels=4):
+    def reconstruct(self, bytes, image_height=1520, image_width=2028, channels=4):
         # always 4-channel RGBA
         expected = image_height * image_width * channels
         if len(bytes) != expected:
@@ -51,7 +51,7 @@ class StereoClientDevice:
             self.run_depth_map_pipeline(imgL, imgR)
 
     
-    def run_depth_map_pipeline(self, imgL, imgR, print_metrics=False, actual_depth=0.6):
+    def run_depth_map_pipeline(self, imgL, imgR):
         # Process images (rectification, disparity, depth)
         print("Rectifiying Images")
         rectified_L, rectified_R = self.stereo.rectify_pair(imgL, imgR)
@@ -63,13 +63,14 @@ class StereoClientDevice:
         print("Calculating Depth")
         depth = self.stereo.disparity_to_depth(dispL)
         print("Visualizing Depth Map")
-        self.stereo.visualize_depth_map(depth, original_image=imgL, title="Depth Map", vmax=1.75, save_folder="C:\\repos\\images\\depth_maps\\")
-        if print_metrics:
-            print("Calculating Performance Metrics")
-            rmse = depth_rmse(depth, actual_depth)
-            noise = spatial_noise(depth)
-            lr = median_lr_consistency_error(dispL, dispR)
-            print(f"Depth RMSE: {rmse:.4f} m, Spatial Noise: {noise:.4f} m, Median LR Consistency Error: {lr:.2f} pixels")
+        self.stereo.visualize_depth_map(depth, original_image=imgL, title="Depth Map", vmin=0.7,vmax=0.85, save_folder="C:\\repos\\images\\depth_maps\\")
+        actual_depth = input("Enter actual depth for performance metrics (or press Enter to skip): ")
+        if actual_depth:
+            roi_depth, roi_dispL, roi_dispR = get_roi(depth, dispL, dispR)
+            rmse = depth_rmse(roi_depth, actual_depth)
+            noise = spatial_noise(roi_depth)
+            lr = median_lr_consistency_error(roi_dispL, roi_dispR)
+            print(f"Depth RMSE: {rmse*1000:.4f} mm, Spatial Noise: {noise*1000:.4f} mm, Median LR Consistency Error: {lr:.2f} pixels")
 
     def run(self):
         self.client.connect()
