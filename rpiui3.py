@@ -212,7 +212,7 @@ class RaspberryPiStereoSystem:
 
     def init_status_lights(self):
         self.status_panel = QWidget(self.central_widget)
-        self.status_panel.setGeometry(10, 45, 120, 110)
+        self.status_panel.setGeometry(5, 5, 105, 110)
         self.status_panel.setStyleSheet("background-color: transparent;")
         
         def create_indicator(y_pos, text):
@@ -223,7 +223,7 @@ class RaspberryPiStereoSystem:
             
             lbl = QLabel(text, self.status_panel)
             lbl.setGeometry(25, y_pos - 3, 90, 20)
-            lbl.setStyleSheet("color: white; font-size: 10px; font-weight: bold; background: transparent;")
+            lbl.setStyleSheet("color: white; font-size: 13px; font-weight: bold; background: transparent;")
             return led
             
         self.led_server = create_indicator(10, "Server Status")
@@ -265,7 +265,7 @@ class RaspberryPiStereoSystem:
         self.settings_button.setIconSize(QSize(30, 30))
         self.settings_button.setFixedSize(50, 50)
         self.settings_button.setParent(self.central_widget)
-        self.settings_button.move(UI_WIDTH - 70, 45) 
+        self.settings_button.move(UI_WIDTH - 70, 15) 
         self.settings_button.hide() 
 
     def calibration_ui(self):
