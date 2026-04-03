@@ -11,7 +11,7 @@ from stereo_class_ethan import StereoSystem
 
 #ui imports
 import sys
-from PyQt5.QtWidgets import QApplication, QMainWindow, QPushButton, QGridLayout, QWidget, QLabel, QLineEdit, QHBoxLayout
+from PyQt5.QtWidgets import QApplication, QMainWindow, QPushButton, QGridLayout, QWidget, QLabel, QLineEdit, QHBoxLayout, QComboBox, QSlider
 from PyQt5.QtCore import Qt, QSize, QObject, pyqtSignal, QTimer
 from PyQt5.QtGui import QIcon, QPixmap, QImage
 from picamera2.previews.qt import QGlPicamera2
@@ -39,10 +39,19 @@ QPushButton:pressed {
 }
 """
 
+COMBO_STYLE = """
+QComboBox {
+    background-color: #333; color: white; border: 1px solid #555; border-radius: 5px; padding: 5px; font-size: 16px;
+}
+QComboBox QAbstractItemView {
+    background-color: #333; color: white; selection-background-color: #555;
+}
+"""
+
 class TransmissionSignals(QObject):
-    update_lights = pyqtSignal(bool, bool, bool, bool)
+    update_lights = pyqtSignal()
     update_calib_count = pyqtSignal(int)
-    show_depth_map = pyqtSignal(object) # For passing the numpy depth image to the main thread
+    show_depth_map = pyqtSignal(object) 
 
 class RaspberryPiStereoSystem:
     def __init__(self):
@@ -53,7 +62,6 @@ class RaspberryPiStereoSystem:
         self.folder_path=""
         self.img_number = 0
         
-        # Local Stereo processing system
         self.local_stereo = None
         self.local_stereo = StereoSystem(block_size=3, num_disp=16*15, wls_lambda=8000.0)
         try:
@@ -66,6 +74,7 @@ class RaspberryPiStereoSystem:
         self.calibration_count = 0
         self.is_capturing = False
         self.is_transferring = False
+        self.is_processing = False
 
         self.signals = TransmissionSignals()
         self.signals.update_lights.connect(self._update_lights_safe)
@@ -83,25 +92,29 @@ class RaspberryPiStereoSystem:
         self.is_transferring = False
         self.emit_lights_update()
 
-    def _update_lights_safe(self, server_on, client_on, capture_on, transfer_on):
+    def _update_lights_safe(self):
         green = "background-color: #4CAF50; border-radius: 7px; border: 1px solid #222;"
         red = "background-color: #F44336; border-radius: 7px; border: 1px solid #222;"
         gray = "background-color: #555555; border-radius: 7px; border: 1px solid #222;"
         yellow = "background-color: #FFC107; border-radius: 7px; border: 1px solid #222;"
         blue = "background-color: #2196F3; border-radius: 7px; border: 1px solid #222;"
 
-        self.led_server.setStyleSheet(green if server_on else red)
-        self.led_client.setStyleSheet(green if client_on else red)
-        self.led_capture.setStyleSheet(yellow if capture_on else gray)
-        self.led_transfer.setStyleSheet(blue if transfer_on else gray)
+        if self.current_mode == 'local':
+            self.led_local_capture.setStyleSheet(yellow if self.is_capturing else gray)
+            self.led_local_process.setStyleSheet(blue if self.is_processing else gray)
+        else:
+            server_status = getattr(self.server, '_running', False)
+            client_status = getattr(self.server, 'connected', False)
+            self.led_server.setStyleSheet(green if server_status else red)
+            self.led_client.setStyleSheet(green if client_status else red)
+            self.led_capture.setStyleSheet(yellow if self.is_capturing else gray)
+            self.led_transfer.setStyleSheet(blue if self.is_transferring else gray)
 
     def _update_calib_count_safe(self, count):
         self.calibration_counter_label.setText(f"Calibration Images: {count}")
 
     def emit_lights_update(self):
-        server_status = getattr(self.server, '_running', False)
-        client_status = getattr(self.server, 'connected', False)
-        self.signals.update_lights.emit(server_status, client_status, self.is_capturing, self.is_transferring)
+        self.signals.update_lights.emit()
 
     def save_images_locally(self, left_image, right_image, left_filename="left_image.jpg", right_filename="right_image.jpg", folder="simonspi/Desktop/images"):
         time_stamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -149,7 +162,13 @@ class RaspberryPiStereoSystem:
             self.capture_button.show()
             
         elif self.current_mode == 'local':
+            self.is_capturing = False
+            self.is_processing = True
+            self.emit_lights_update()
             self._compute_local_depth(imgL, imgR)
+            self.is_processing = False
+            self.emit_lights_update()
+            return # Compute handles showing the 'Done' button
             
         elif self.current_mode == 'capture':
             if self.server.connected:
@@ -169,17 +188,17 @@ class RaspberryPiStereoSystem:
     def _compute_local_depth(self, imgL, imgR):
         if not self.local_stereo:
             print("StereoSystem not loaded.")
+            self.capture_button.show()
             return
 
         try:
-            # Get settings from local settings UI
-            bs = int(self.bs_input.text()) if self.bs_input.text().isdigit() else 3
-            nd = int(self.nd_input.text()) if self.nd_input.text().isdigit() else 240
-            wls = float(self.wls_input.text()) if self.wls_input.text().replace('.','',1).isdigit() else 8000.0
-            vmin = float(self.vmin_input.text()) if self.vmin_input.text().replace('.','',1).isdigit() else 10.0
-            vmax = float(self.vmax_input.text()) if self.vmax_input.text().replace('.','',1).isdigit() else 90.0
+            # Fetch Combo Box and Slider values
+            bs = int(self.bs_combo.currentText())
+            nd = int(self.nd_combo.currentText())
+            wls = float(self.wls_combo.currentText())
+            vmin = float(self.vmin_slider.value())
+            vmax = float(self.vmax_slider.value())
 
-            # Re-init system with custom settings if necessary (Assuming you have a method for this, otherwise defaults)
             self.local_stereo.block_size = bs
             self.local_stereo.num_disp = nd
             self.local_stereo.wls_lambda = wls
@@ -189,7 +208,7 @@ class RaspberryPiStereoSystem:
             disp_filtered, dispL, dispR = self.local_stereo.compute_disparity(rectifiedL, rectifiedR)
             depth = self.local_stereo.disparity_to_depth(disp_filtered)
 
-            # Apply Colormap based on vmin/vmax
+            # Colormap
             valid_mask = np.isfinite(depth) & (depth > 0)
             norm_depth = np.zeros_like(depth, dtype=np.uint8)
             
@@ -200,32 +219,46 @@ class RaspberryPiStereoSystem:
             depth_color = cv2.applyColorMap(norm_depth, cv2.COLORMAP_JET)
             depth_color[~valid_mask] = [0, 0, 0] # Make invalid pixels black
             
-            # Send the resulting color image to the main UI thread safely
+            # Draw Color Bar
+            h, w = depth_color.shape[:2]
+            cb_w = max(20, int(w * 0.03))
+            cb_h = int(h * 0.6)
+            cb_x = w - cb_w - 20
+            cb_y = (h - cb_h) // 2
+
+            gradient = np.linspace(255, 0, cb_h, dtype=np.uint8)
+            gradient = np.tile(gradient, (cb_w, 1)).T
+            gradient_col = cv2.applyColorMap(gradient, cv2.COLORMAP_JET)
+
+            depth_color[cb_y:cb_y+cb_h, cb_x:cb_x+cb_w] = gradient_col
+            cv2.rectangle(depth_color, (cb_x, cb_y), (cb_x + cb_w, cb_y + cb_h), (255, 255, 255), 1)
+
+            font, scale, thick = cv2.FONT_HERSHEY_SIMPLEX, 0.6, 2
+            for val, y_pos in [(vmax, cb_y + 15), (vmin, cb_y + cb_h)]:
+                text = f"{val:.1f}"
+                cv2.putText(depth_color, text, (cb_x - 80, y_pos), font, scale, (0, 0, 0), thick + 1)
+                cv2.putText(depth_color, text, (cb_x - 80, y_pos), font, scale, (255, 255, 255), thick)
+
             self.signals.show_depth_map.emit(depth_color)
             
         except Exception as e:
             print(f"Error computing local depth: {e}")
-            self.capture_button.show() # Reset capture button on failure
+            self.capture_button.show() 
 
     def _display_depth_map_safe(self, depth_image_bgr):
-        # Hide live feeds
         self.qpicamera2.hide()
         self.qpicamera_right.hide()
         
-        # Convert cv2 BGR image to QPixmap
         rgb_image = cv2.cvtColor(depth_image_bgr, cv2.COLOR_BGR2RGB)
         h, w, ch = rgb_image.shape
         bytes_per_line = ch * w
         qt_img = QImage(rgb_image.data, w, h, bytes_per_line, QImage.Format_RGB888)
         pixmap = QPixmap.fromImage(qt_img)
 
-        # Scale to fit UI while maintaining aspect ratio
         scaled_pixmap = pixmap.scaled(UI_WIDTH, UI_HEIGHT, Qt.KeepAspectRatio, Qt.SmoothTransformation)
-        
         self.depth_view_label.setPixmap(scaled_pixmap)
         self.depth_view_label.show()
         
-        # Hide settings and show the 'Done' button
         if self.local_settings_panel.isVisible():
             self.toggle_local_settings()
             
@@ -238,12 +271,10 @@ class RaspberryPiStereoSystem:
         self.done_button.hide()
         self.settings_button.show()
         self.capture_button.show()
-        
-        # Restore camera preview
         self.qpicamera2.show()
 
     def change_fps(self):
-        print("Change FPS button clicked - functionality not implemented yet")
+        print("Change FPS button clicked")
 
     def fake_quitting(self):
         self.current_mode = None
@@ -253,7 +284,8 @@ class RaspberryPiStereoSystem:
         if self.local_settings_panel.isVisible():
             self.local_settings_panel.hide()
             
-        self.status_panel.hide()
+        self.status_panel_server.hide()
+        self.status_panel_local.hide()
         self.capture_button.hide()
         self.settings_button.hide()
         self.qpicamera2.hide()
@@ -275,7 +307,7 @@ class RaspberryPiStereoSystem:
         self.server.stop_server()
         self.app.quit()
 
-    def _create_input_row(self, parent, label_text, default_val):
+    def _create_combo_row(self, parent, label_text, items, default_idx=0):
         row = QWidget(parent)
         layout = QHBoxLayout(row)
         layout.setContentsMargins(10, 0, 10, 0)
@@ -284,12 +316,39 @@ class RaspberryPiStereoSystem:
         lbl.setStyleSheet("color: white; font-size: 16px; font-weight: bold;")
         lbl.setFixedWidth(120)
         
-        entry = QLineEdit(str(default_val))
-        entry.setStyleSheet("background-color: #333; color: white; border: 1px solid #555; border-radius: 5px; padding: 5px; font-size: 16px;")
+        combo = QComboBox()
+        combo.addItems(items)
+        combo.setCurrentIndex(default_idx)
+        combo.setStyleSheet(COMBO_STYLE)
         
         layout.addWidget(lbl)
-        layout.addWidget(entry)
-        return row, entry
+        layout.addWidget(combo)
+        return row, combo
+
+    def _create_slider_row(self, parent, label_text, min_v, max_v, default_v):
+        row = QWidget(parent)
+        layout = QHBoxLayout(row)
+        layout.setContentsMargins(10, 0, 10, 0)
+        
+        lbl = QLabel(label_text)
+        lbl.setStyleSheet("color: white; font-size: 16px; font-weight: bold;")
+        lbl.setFixedWidth(50)
+        
+        val_lbl = QLabel(str(float(default_v)))
+        val_lbl.setStyleSheet("color: #4CAF50; font-size: 16px; font-weight: bold;")
+        val_lbl.setFixedWidth(50)
+
+        slider = QSlider(Qt.Horizontal)
+        slider.setRange(min_v, max_v)
+        slider.setValue(default_v)
+        slider.setStyleSheet("QSlider::handle:horizontal { background: white; border-radius: 5px; width: 10px; }")
+
+        slider.valueChanged.connect(lambda v: val_lbl.setText(str(float(v))))
+        
+        layout.addWidget(lbl)
+        layout.addWidget(val_lbl)
+        layout.addWidget(slider)
+        return row, slider
 
     def init_settingui(self):
         # ---------------- Server Mode Settings ----------------
@@ -337,23 +396,26 @@ class RaspberryPiStereoSystem:
         self.local_settings_panel.hide()
         
         lbl_title = QLabel("Local Processing Settings", parent=self.local_settings_panel)
-        lbl_title.setStyleSheet("color: white; font-size: 18px; font-weight: bold;")
+        lbl_title.setStyleSheet("color: white; font-size: 18px; font-weight: bold; background: transparent; border: none;")
         lbl_title.setAlignment(Qt.AlignCenter)
         lbl_title.setGeometry(50, 15, 250, 30)
 
-        r1, self.bs_input = self._create_input_row(self.local_settings_panel, "Block Size", 3)
+        bs_opts = ['3', '5', '7', '9', '11', '15', '21']
+        r1, self.bs_combo = self._create_combo_row(self.local_settings_panel, "Block Size", bs_opts, 0)
         r1.setGeometry(20, 60, 310, 40)
         
-        r2, self.nd_input = self._create_input_row(self.local_settings_panel, "Num Disp", 240)
+        nd_opts = [str(16*i) for i in range(1, 21)]
+        r2, self.nd_combo = self._create_combo_row(self.local_settings_panel, "Num Disp", nd_opts, 14) # Default 240
         r2.setGeometry(20, 110, 310, 40)
         
-        r3, self.wls_input = self._create_input_row(self.local_settings_panel, "WLS Lambda", 8000.0)
+        wls_opts = ['800.0', '8000.0', '80000.0']
+        r3, self.wls_combo = self._create_combo_row(self.local_settings_panel, "WLS Filter", wls_opts, 1)
         r3.setGeometry(20, 160, 310, 40)
         
-        r4, self.vmin_input = self._create_input_row(self.local_settings_panel, "Vmin", 10.0)
+        r4, self.vmin_slider = self._create_slider_row(self.local_settings_panel, "Vmin", 0, 100, 10)
         r4.setGeometry(20, 210, 310, 40)
         
-        r5, self.vmax_input = self._create_input_row(self.local_settings_panel, "Vmax", 90.0)
+        r5, self.vmax_slider = self._create_slider_row(self.local_settings_panel, "Vmax", 0, 100, 90)
         r5.setGeometry(20, 260, 310, 40)
 
         self.local_quit_button = QPushButton(text="Back to Start", parent=self.local_settings_panel)
@@ -365,7 +427,6 @@ class RaspberryPiStereoSystem:
         self.close_local_btn.clicked.connect(self.toggle_local_settings)
         self.close_local_btn.setStyleSheet(BTN_STYLE)
         self.close_local_btn.setGeometry(100, 400, 150, 40)
-
 
     def toggle_settings(self):
         if self.settings_panel.isVisible():
@@ -395,26 +456,35 @@ class RaspberryPiStereoSystem:
             self.toggle_settings()
 
     def init_status_lights(self):
-        self.status_panel = QWidget(self.central_widget)
-        self.status_panel.setGeometry(10, 45, 120, 110)
-        self.status_panel.setStyleSheet("background-color: transparent;")
-        
-        def create_indicator(y_pos, text):
-            led = QLabel(self.status_panel)
+        def create_indicator(parent, y_pos, text):
+            led = QLabel(parent)
             led.setGeometry(5, y_pos, 14, 14)
             led.setStyleSheet("background-color: #555555; border-radius: 7px; border: 1px solid #222;")
             
-            lbl = QLabel(text, self.status_panel)
+            lbl = QLabel(text, parent)
             lbl.setGeometry(25, y_pos - 3, 90, 20)
             lbl.setStyleSheet("color: white; font-size: 10px; font-weight: bold; background: transparent;")
             return led
-            
-        self.led_server = create_indicator(10, "Server Status")
-        self.led_client = create_indicator(35, "Client Link")
-        self.led_capture = create_indicator(60, "Capturing")
-        self.led_transfer = create_indicator(85, "Transferring")
+
+        # Panel for Capture/Calibration (Server Mode)
+        self.status_panel_server = QWidget(self.central_widget)
+        self.status_panel_server.setGeometry(10, 45, 120, 110)
+        self.status_panel_server.setStyleSheet("background-color: transparent;")
         
-        self.status_panel.hide()
+        self.led_server = create_indicator(self.status_panel_server, 10, "Server Status")
+        self.led_client = create_indicator(self.status_panel_server, 35, "Client Link")
+        self.led_capture = create_indicator(self.status_panel_server, 60, "Capturing")
+        self.led_transfer = create_indicator(self.status_panel_server, 85, "Transferring")
+        self.status_panel_server.hide()
+
+        # Panel for Local Compute
+        self.status_panel_local = QWidget(self.central_widget)
+        self.status_panel_local.setGeometry(10, 45, 120, 60)
+        self.status_panel_local.setStyleSheet("background-color: transparent;")
+        
+        self.led_local_capture = create_indicator(self.status_panel_local, 10, "Capturing")
+        self.led_local_process = create_indicator(self.status_panel_local, 35, "Processing")
+        self.status_panel_local.hide()
 
     def init_capture_ui(self):
         self.qpicamera2 = QGlPicamera2(self.stereo_system.left_camera, width=UI_WIDTH, height=UI_HEIGHT, keep_ar=True)
@@ -425,7 +495,6 @@ class RaspberryPiStereoSystem:
         self.qpicamera_right.setParent(self.central_widget)
         self.qpicamera_right.hide()
 
-        # Label to hold the generated depth map
         self.depth_view_label = QLabel(self.central_widget)
         self.depth_view_label.setGeometry(0, 0, UI_WIDTH, UI_HEIGHT)
         self.depth_view_label.setAlignment(Qt.AlignCenter)
@@ -492,8 +561,8 @@ class RaspberryPiStereoSystem:
         self.capture_button.show()
         self.settings_button.raise_()
         self.settings_button.show()
-        self.status_panel.raise_()
-        self.status_panel.show()
+        self.status_panel_server.raise_()
+        self.status_panel_server.show()
         self.calibration_counter_label.raise_()
         self.calibration_counter_label.show()
 
@@ -517,8 +586,8 @@ class RaspberryPiStereoSystem:
         self.capture_button.show()
         self.settings_button.raise_()
         self.settings_button.show()
-        self.status_panel.raise_()
-        self.status_panel.show()
+        self.status_panel_server.raise_()
+        self.status_panel_server.show()
 
     def run_locally_ui(self):
         self.current_mode = 'local'
@@ -528,7 +597,6 @@ class RaspberryPiStereoSystem:
         self.run_locally_btn.hide()
         self.quit_button.hide()
 
-        # Turn OFF the server when moving to Local compute mode
         if getattr(self.server, '_running', False):
             self.server.stop_server()
             self.emit_lights_update()
@@ -541,8 +609,8 @@ class RaspberryPiStereoSystem:
         self.capture_button.show()
         self.settings_button.raise_()
         self.settings_button.show()
-        self.status_panel.raise_()
-        self.status_panel.show()
+        self.status_panel_local.raise_()
+        self.status_panel_local.show()
 
     def UI_start(self):
         self.app = QApplication(sys.argv)
