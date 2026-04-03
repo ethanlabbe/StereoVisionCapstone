@@ -38,6 +38,7 @@ QPushButton:pressed {
 
 class TransmissionSignals(QObject):
     update_lights = pyqtSignal(bool, bool, bool, bool)
+    update_calib_count = pyqtSignal(int)
 
 class RaspberryPiStereoSystem:
     def __init__(self):
@@ -49,12 +50,15 @@ class RaspberryPiStereoSystem:
         self.folder_path=""
         self.img_number = 0
         
-        # State variables for status lights
+        # State variables for modes and status lights
+        self.current_mode = None
+        self.calibration_count = 0
         self.is_capturing = False
         self.is_transferring = False
 
         self.signals = TransmissionSignals()
         self.signals.update_lights.connect(self._update_lights_safe)
+        self.signals.update_calib_count.connect(self._update_calib_count_safe)
         
         self.server.on_send_start = self._handle_send_start
         self.server.on_send_complete = self._handle_send_complete
@@ -68,7 +72,6 @@ class RaspberryPiStereoSystem:
         self.emit_lights_update()
 
     def _update_lights_safe(self, server_on, client_on, capture_on, transfer_on):
-        # Border radius changed to 7px to maintain perfect circles on 14x14px LEDs
         green = "background-color: #4CAF50; border-radius: 7px; border: 1px solid #222;"
         red = "background-color: #F44336; border-radius: 7px; border: 1px solid #222;"
         gray = "background-color: #555555; border-radius: 7px; border: 1px solid #222;"
@@ -79,6 +82,9 @@ class RaspberryPiStereoSystem:
         self.led_client.setStyleSheet(green if client_on else red)
         self.led_capture.setStyleSheet(yellow if capture_on else gray)
         self.led_transfer.setStyleSheet(blue if transfer_on else gray)
+
+    def _update_calib_count_safe(self, count):
+        self.calibration_counter_label.setText(f"Calibration Images: {count}")
 
     def emit_lights_update(self):
         server_status = getattr(self.server, '_running', False)
@@ -124,6 +130,11 @@ class RaspberryPiStereoSystem:
         self.img_number += 1
         current_id = self.img_number 
         
+        # Increment calibration counter if we are in calibration mode
+        if self.current_mode == 'calibration':
+            self.calibration_count += 1
+            self.signals.update_calib_count.emit(self.calibration_count)
+        
         self.is_capturing = False
         self.emit_lights_update()
 
@@ -141,10 +152,8 @@ class RaspberryPiStereoSystem:
         print("Change FPS button clicked - functionality not implemented yet")
 
     def fake_quitting(self):
-        self.stereo_system.stop()
-        if self.server._running:
-            self.server.stop_server()
-            self.server_button.setText("Start Server")
+        # We no longer stop the stereo system or the server when returning to the start menu
+        self.current_mode = None
             
         if self.settings_panel.isVisible():
             self.toggle_settings() # ensure settings menu is closed
@@ -153,6 +162,8 @@ class RaspberryPiStereoSystem:
         self.capture_button.hide()
         self.settings_button.hide()
         self.qpicamera2.hide()
+        self.qpicamera_right.hide()
+        self.calibration_counter_label.hide()
 
         self.logo_label.show()
         self.calibrate_btn.show()
@@ -161,10 +172,11 @@ class RaspberryPiStereoSystem:
         self.quit_button.show()
 
     def real_quitting(self):
+        self.stereo_system.stop()
+        self.server.stop_server()
         self.app.quit()
 
     def init_settingui(self):
-        # Settings Dropdown Panel Background
         self.settings_panel = QWidget(self.central_widget)
         self.settings_panel.setObjectName("settingsPanel")
         self.settings_panel.setStyleSheet("QWidget#settingsPanel { background-color: rgba(25, 25, 25, 240); border: 2px solid #555555; border-radius: 15px; }")
@@ -206,24 +218,25 @@ class RaspberryPiStereoSystem:
             self.settings_panel.hide()
             self.capture_button.show()
         else:
+            # Sync the server button text in case it changed while settings were closed
+            self.server_button.setText("Stop Server" if getattr(self.server, '_running', False) else "Start Server")
             self.settings_panel.raise_() 
             self.settings_panel.show()
             self.capture_button.hide()
 
     def init_status_lights(self):
         self.status_panel = QWidget(self.central_widget)
-        self.status_panel.setGeometry(5, 5, 105, 110)
+        self.status_panel.setGeometry(10, 45, 120, 110)
         self.status_panel.setStyleSheet("background-color: transparent;")
         
         def create_indicator(y_pos, text):
             led = QLabel(self.status_panel)
-            # Smaller 14x14px LEDs
             led.setGeometry(5, y_pos, 14, 14)
             led.setStyleSheet("background-color: #555555; border-radius: 7px; border: 1px solid #222;")
             
             lbl = QLabel(text, self.status_panel)
             lbl.setGeometry(25, y_pos - 3, 90, 20)
-            lbl.setStyleSheet("color: white; font-size: 13px; font-weight: bold; background: transparent;")
+            lbl.setStyleSheet("color: white; font-size: 10px; font-weight: bold; background: transparent;")
             return led
             
         self.led_server = create_indicator(10, "Server Status")
@@ -234,14 +247,27 @@ class RaspberryPiStereoSystem:
         self.status_panel.hide()
 
     def init_capture_ui(self):
+        # Left Camera Preview
         self.qpicamera2 = QGlPicamera2(self.stereo_system.left_camera, width=UI_WIDTH, height=UI_HEIGHT, keep_ar=True)
-        self.stereo_system.start()
-
         self.qpicamera2.setParent(self.central_widget)
-        self.qpicamera2.setGeometry(0, 0, UI_WIDTH, UI_HEIGHT)
         self.qpicamera2.hide() 
 
+        # Right Camera Preview
+        self.qpicamera_right = QGlPicamera2(self.stereo_system.right_camera, width=UI_WIDTH, height=UI_HEIGHT, keep_ar=True)
+        self.qpicamera_right.setParent(self.central_widget)
+        self.qpicamera_right.hide()
+
+        self.stereo_system.start()
+
         self.init_status_lights()
+
+        # Calibration Counter Label
+        self.calibration_counter_label = QLabel(f"Calibration Images: {self.calibration_count}", parent=self.central_widget)
+        self.calibration_counter_label.setStyleSheet("background-color: rgba(43, 43, 43, 200); color: #ffffff; border: 2px solid #555555; border-radius: 10px; font-size: 20px; font-weight: bold;")
+        self.calibration_counter_label.setAlignment(Qt.AlignCenter)
+        self.calibration_counter_label.setFixedSize(250, 50)
+        self.calibration_counter_label.move(int((UI_WIDTH - 250) / 2), 20) # Top center
+        self.calibration_counter_label.hide()
 
         self.capture_button = QPushButton(text="Capture", parent=None)
         self.capture_button.clicked.connect(self.image_capture)
@@ -265,29 +291,30 @@ class RaspberryPiStereoSystem:
         self.settings_button.setIconSize(QSize(30, 30))
         self.settings_button.setFixedSize(50, 50)
         self.settings_button.setParent(self.central_widget)
-        self.settings_button.move(UI_WIDTH - 70, 15) 
+        self.settings_button.move(UI_WIDTH - 70, 45) 
         self.settings_button.hide() 
 
     def calibration_ui(self):
-        print("Calibration button clicked - functionality not implemented yet")
-
-    def run_locally(self):
-        print("Run locally button clicked - functionality not implemented yet")
-
-    def capture_ui(self):
+        self.current_mode = 'calibration'
         self.logo_label.hide()
         self.calibrate_btn.hide()
         self.start_capture_btn.hide()
         self.run_locally_btn.hide()
         self.quit_button.hide()
 
-        # Start the server by default when entering Capture UI
-        if not self.server._running:
+        # Start the server by default
+        if not getattr(self.server, '_running', False):
             self.server.start_server()
             self.server_button.setText("Stop Server")
             self.emit_lights_update()
 
-        self.qpicamera2.show() 
+        # Show Both Cameras (Side-by-Side)
+        half_width = int(UI_WIDTH / 2)
+        self.qpicamera2.setGeometry(0, 0, half_width, UI_HEIGHT)
+        self.qpicamera_right.setGeometry(half_width, 0, half_width, UI_HEIGHT)
+        self.qpicamera2.show()
+        self.qpicamera_right.show()
+
         self.capture_button.show()
         
         self.settings_button.raise_()
@@ -295,6 +322,40 @@ class RaspberryPiStereoSystem:
         
         self.status_panel.raise_()
         self.status_panel.show()
+
+        self.calibration_counter_label.raise_()
+        self.calibration_counter_label.show()
+
+    def capture_ui(self):
+        self.current_mode = 'capture'
+        self.logo_label.hide()
+        self.calibrate_btn.hide()
+        self.start_capture_btn.hide()
+        self.run_locally_btn.hide()
+        self.quit_button.hide()
+
+        # Start the server by default
+        if not getattr(self.server, '_running', False):
+            self.server.start_server()
+            self.server_button.setText("Stop Server")
+            self.emit_lights_update()
+
+        # Show Left Camera (Full Screen)
+        self.qpicamera2.setGeometry(0, 0, UI_WIDTH, UI_HEIGHT)
+        self.qpicamera2.show()
+        self.qpicamera_right.hide() 
+        self.calibration_counter_label.hide()
+
+        self.capture_button.show()
+        
+        self.settings_button.raise_()
+        self.settings_button.show()
+        
+        self.status_panel.raise_()
+        self.status_panel.show()
+
+    def run_locally(self):
+        print("Run locally button clicked - functionality not implemented yet")
 
     def UI_start(self):
         self.app = QApplication(sys.argv)
