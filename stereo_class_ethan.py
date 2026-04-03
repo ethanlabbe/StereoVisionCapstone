@@ -21,8 +21,13 @@ class StereoSystem:
         self.square_size = 0.0181  # Size of a square in meters
 
         self.corners_L = []
+        self.objpoints_L = []
         self.corners_R = []
-        self.objpoints = []
+        self.objpoints_R = []
+        
+        self.stereo_corners_L = []
+        self.stereo_corners_R = []
+        self.objpoints_stereo = []
 
         self.window_size = window_size
         self.min_disp = min_disp
@@ -61,21 +66,31 @@ class StereoSystem:
         ret_right, corners_right = cv2.findChessboardCornersSB(gray_right, self.chessboard_size, flags)
 
         # Subpixel refinement if corners found
-        if ret_left and ret_right:
-            corners_right = cv2.cornerSubPix(gray_right, corners_right, (11, 11), (-1, -1), criteria=(cv2.TERM_CRITERIA_EPS +cv2.TERM_CRITERIA_MAX_ITER, 30, 0.001))
-            corners_left = cv2.cornerSubPix(gray_left, corners_left, (11, 11), (-1, -1), criteria=(cv2.TERM_CRITERIA_EPS +cv2.TERM_CRITERIA_MAX_ITER, 30, 0.001))   
-            
+        if ret_left:
+            corners_left = cv2.cornerSubPix(gray_left, corners_left, (11, 11), (-1, -1), criteria=(cv2.TERM_CRITERIA_EPS +cv2.TERM_CRITERIA_MAX_ITER, 30, 0.001))
             self.corners_L.append(corners_left)
+            objp = np.zeros((self.chessboard_size[0] * self.chessboard_size[1], 3), np.float32)
+            objp[:, :2] = np.mgrid[0:self.chessboard_size[0], 0:self.chessboard_size[1]].T.reshape(-1, 2) * self.square_size
+            self.objpoints_L.append(objp)
+        if ret_right:
+            corners_right = cv2.cornerSubPix(gray_right, corners_right, (11, 11), (-1, -1), criteria=(cv2.TERM_CRITERIA_EPS +cv2.TERM_CRITERIA_MAX_ITER, 30, 0.001))
             self.corners_R.append(corners_right)
             objp = np.zeros((self.chessboard_size[0] * self.chessboard_size[1], 3), np.float32)
             objp[:, :2] = np.mgrid[0:self.chessboard_size[0], 0:self.chessboard_size[1]].T.reshape(-1, 2) * self.square_size
-            self.objpoints.append(objp)
+            self.objpoints_R.append(objp)
+
+        if ret_left and ret_right:
+            self.stereo_corners_L.append(corners_left)
+            self.stereo_corners_R.append(corners_right)
+            objp = np.zeros((self.chessboard_size[0] * self.chessboard_size[1], 3), np.float32)
+            objp[:, :2] = np.mgrid[0:self.chessboard_size[0], 0:self.chessboard_size[1]].T.reshape(-1, 2) * self.square_size
+            self.objpoints_stereo.append(objp)
             
             if display:
                 # Visualize detected corners using OpenCV and auto-close after 1 second
                 cv2.drawChessboardCorners(
                     img_left, self.chessboard_size, corners_left, ret_left)
-                img_left_resized = cv2.resize(img_left, (800, 600))
+                img_left_resized = cv2.resize(img_left, (2028, 1520))
                 cv2.imshow('Left Chessboard Corners', img_left_resized)
                 cv2.waitKey(500)  # Show for 500 ms (0.5 second)
                 cv2.destroyAllWindows()
@@ -88,12 +103,12 @@ class StereoSystem:
         criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 30, 1e-6)
         
         self.retL, self.mtxL, self.distL, self.rvecsL, self.tvecsL = cv2.calibrateCamera(
-            self.objpoints, self.corners_L, self.calib_size, None, None)
+            self.objpoints_L, self.corners_L, self.calib_size, None, None)
         self.retR, self.mtxR, self.distR, self.rvecsR, self.tvecsR = cv2.calibrateCamera(
-            self.objpoints, self.corners_R, self.calib_size, None, None)
+            self.objpoints_R, self.corners_R, self.calib_size, None, None)
         
         self.stereo_ret, _, _, _, _, self.R, self.T, self.E, self.F = cv2.stereoCalibrate(
-            self.objpoints, self.corners_L, self.corners_R, 
+            self.objpoints_stereo, self.stereo_corners_L, self.stereo_corners_R,
             self.mtxL, self.distL, self.mtxR, self.distR,
             self.calib_size, flags=flags, criteria=criteria)
 
@@ -233,7 +248,7 @@ class StereoSystem:
         depth[(depth < 0.05) | (depth > 20)] = np.nan  # tune for your scene
         return depth
 
-    def visualize_depth_map(self, depth, original_image=None, title='Depth Map', vmin=0.25, vmax=2.5, save_folder=None):
+    def visualize_depth_map(self, depth, original_image=None, title='Depth Map', save_folder=None):
         depth = depth.copy()
         depth[depth <= 0] = np.nan  # Mask invalid values
 
@@ -247,8 +262,10 @@ class StereoSystem:
             plt.subplot(1, 2, 2)  
         else:
             plt.figure(figsize=(10, 7))
+        vmin = np.nanpercentile(depth, 10)
+        vmax = np.nanpercentile(depth, 90)
         im = plt.imshow(depth, cmap='plasma', vmin=vmin, vmax=vmax)
-        cbar = plt.colorbar(im, label='Depth (meters)')
+        plt.colorbar(im, label='Depth (meters)')
         plt.title(title)
         plt.xlabel('Pixel X')
         plt.ylabel('Pixel Y')
