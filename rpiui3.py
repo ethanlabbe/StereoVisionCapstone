@@ -16,8 +16,25 @@ from picamera2.previews.qt import QGlPicamera2
 UI_HEIGHT=600
 UI_WIDTH=1024
 
-BTN_STYLE = "background-color: #2b2b2b; color: #ffffff; border: 2px solid #555555; border-radius: 10px; font-size: 18px; font-weight: bold;"
-BTN_STYLE_LG = "background-color: #2b2b2b; color: #ffffff; border: 2px solid #555555; border-radius: 10px; font-size: 20px; font-weight: bold;"
+LBL_STYLE = "background-color: #2b2b2b; color: #ffffff; border: 2px solid #555555; border-radius: 10px; font-size: 18px; font-weight: bold;"
+
+BTN_STYLE = """
+QPushButton {
+    background-color: #2b2b2b; color: #ffffff; border: 2px solid #555555; border-radius: 10px; font-size: 18px; font-weight: bold;
+}
+QPushButton:pressed {
+    background-color: #555555; border: 2px solid #ffffff; color: #ffffff;
+}
+"""
+
+BTN_STYLE_LG = """
+QPushButton {
+    background-color: #2b2b2b; color: #ffffff; border: 2px solid #555555; border-radius: 10px; font-size: 20px; font-weight: bold;
+}
+QPushButton:pressed {
+    background-color: #555555; border: 2px solid #ffffff; color: #ffffff;
+}
+"""
 
 class TransmissionSignals(QObject):
     update_lights = pyqtSignal(bool, bool, bool, bool)
@@ -125,7 +142,10 @@ class RaspberryPiStereoSystem:
 
     def fake_quitting(self):
         self.stereo_system.stop()
-        self.server.stop_server()
+        if self.server._running:
+            self.server.stop_server()
+            self.server_button.setText("Start Server")
+            
         if self.settings_panel.isVisible():
             self.toggle_settings() # ensure settings menu is closed
             
@@ -152,7 +172,7 @@ class RaspberryPiStereoSystem:
         self.settings_panel.hide()
 
         self.ip_label = QLabel(f"IP: {self.ipaddress}", parent=self.settings_panel)
-        self.ip_label.setStyleSheet(BTN_STYLE)
+        self.ip_label.setStyleSheet(LBL_STYLE)
         self.ip_label.setAlignment(Qt.AlignCenter)
         self.ip_label.setFixedSize(250, 60)
         self.ip_label.move(50, 20) 
@@ -233,7 +253,14 @@ class RaspberryPiStereoSystem:
 
         self.settings_button = QPushButton(parent=None)
         self.settings_button.clicked.connect(self.toggle_settings)
-        self.settings_button.setStyleSheet("background-color: #2b2b2b; border: 2px solid #555555; border-radius: 25px;")
+        self.settings_button.setStyleSheet("""
+        QPushButton {
+            background-color: #2b2b2b; border: 2px solid #555555; border-radius: 25px;
+        }
+        QPushButton:pressed {
+            background-color: #555555; border: 2px solid #ffffff;
+        }
+        """)
         self.settings_button.setIcon(QIcon("UI/gear_icon.png"))
         self.settings_button.setIconSize(QSize(30, 30))
         self.settings_button.setFixedSize(50, 50)
@@ -253,6 +280,12 @@ class RaspberryPiStereoSystem:
         self.start_capture_btn.hide()
         self.run_locally_btn.hide()
         self.quit_button.hide()
+
+        # Start the server by default when entering Capture UI
+        if not self.server._running:
+            self.server.start_server()
+            self.server_button.setText("Stop Server")
+            self.emit_lights_update()
 
         self.qpicamera2.show() 
         self.capture_button.show()
