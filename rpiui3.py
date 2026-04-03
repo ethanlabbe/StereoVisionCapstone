@@ -192,12 +192,12 @@ class RaspberryPiStereoSystem:
             return
 
         try:
-            # Fetch Combo Box and Slider values
+            # Fetch Combo Box and Slider values (Percentiles)
             bs = int(self.bs_combo.currentText())
             nd = int(self.nd_combo.currentText())
             wls = float(self.wls_combo.currentText())
-            vmin = float(self.vmin_slider.value())
-            vmax = float(self.vmax_slider.value())
+            vmin_perc = float(self.vmin_slider.value())
+            vmax_perc = float(self.vmax_slider.value())
 
             self.local_stereo.block_size = bs
             self.local_stereo.num_disp = nd
@@ -212,9 +212,17 @@ class RaspberryPiStereoSystem:
             valid_mask = np.isfinite(depth) & (depth > 0)
             norm_depth = np.zeros_like(depth, dtype=np.uint8)
             
-            if vmax > vmin and np.any(valid_mask):
-                clipped = np.clip(depth[valid_mask], vmin, vmax)
-                norm_depth[valid_mask] = ((clipped - vmin) / (vmax - vmin) * 255).astype(np.uint8)
+            vmin_val = 0.0
+            vmax_val = 0.0
+            
+            if np.any(valid_mask):
+                # Calculate actual dynamic range using percentiles
+                vmin_val = np.percentile(depth[valid_mask], vmin_perc)
+                vmax_val = np.percentile(depth[valid_mask], vmax_perc)
+                
+                if vmax_val > vmin_val:
+                    clipped = np.clip(depth[valid_mask], vmin_val, vmax_val)
+                    norm_depth[valid_mask] = ((clipped - vmin_val) / (vmax_val - vmin_val) * 255).astype(np.uint8)
             
             depth_color = cv2.applyColorMap(norm_depth, cv2.COLORMAP_JET)
             depth_color[~valid_mask] = [0, 0, 0] # Make invalid pixels black
@@ -233,11 +241,12 @@ class RaspberryPiStereoSystem:
             depth_color[cb_y:cb_y+cb_h, cb_x:cb_x+cb_w] = gradient_col
             cv2.rectangle(depth_color, (cb_x, cb_y), (cb_x + cb_w, cb_y + cb_h), (255, 255, 255), 1)
 
+            # Draw labels using calculated dynamic bounds
             font, scale, thick = cv2.FONT_HERSHEY_SIMPLEX, 0.6, 2
-            for val, y_pos in [(vmax, cb_y + 15), (vmin, cb_y + cb_h)]:
-                text = f"{val:.1f}"
-                cv2.putText(depth_color, text, (cb_x - 80, y_pos), font, scale, (0, 0, 0), thick + 1)
-                cv2.putText(depth_color, text, (cb_x - 80, y_pos), font, scale, (255, 255, 255), thick)
+            for val, y_pos in [(vmax_val, cb_y + 15), (vmin_val, cb_y + cb_h)]:
+                text = f"{val:.2f}"
+                cv2.putText(depth_color, text, (cb_x - 70, y_pos), font, scale, (0, 0, 0), thick + 1)
+                cv2.putText(depth_color, text, (cb_x - 70, y_pos), font, scale, (255, 255, 255), thick)
 
             self.signals.show_depth_map.emit(depth_color)
             
@@ -332,11 +341,11 @@ class RaspberryPiStereoSystem:
         
         lbl = QLabel(label_text)
         lbl.setStyleSheet("color: white; font-size: 16px; font-weight: bold;")
-        lbl.setFixedWidth(50)
+        lbl.setFixedWidth(75) # widened slightly for (%)
         
         val_lbl = QLabel(str(float(default_v)))
         val_lbl.setStyleSheet("color: #4CAF50; font-size: 16px; font-weight: bold;")
-        val_lbl.setFixedWidth(50)
+        val_lbl.setFixedWidth(40)
 
         slider = QSlider(Qt.Horizontal)
         slider.setRange(min_v, max_v)
@@ -412,10 +421,10 @@ class RaspberryPiStereoSystem:
         r3, self.wls_combo = self._create_combo_row(self.local_settings_panel, "WLS Filter", wls_opts, 1)
         r3.setGeometry(20, 160, 310, 40)
         
-        r4, self.vmin_slider = self._create_slider_row(self.local_settings_panel, "Vmin", 0, 100, 10)
+        r4, self.vmin_slider = self._create_slider_row(self.local_settings_panel, "Vmin (%)", 0, 100, 10)
         r4.setGeometry(20, 210, 310, 40)
         
-        r5, self.vmax_slider = self._create_slider_row(self.local_settings_panel, "Vmax", 0, 100, 90)
+        r5, self.vmax_slider = self._create_slider_row(self.local_settings_panel, "Vmax (%)", 0, 100, 90)
         r5.setGeometry(20, 260, 310, 40)
 
         self.local_quit_button = QPushButton(text="Back to Start", parent=self.local_settings_panel)
