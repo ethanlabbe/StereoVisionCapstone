@@ -365,7 +365,7 @@ class RaspberryPiStereoSystem:
         # ---------------- Server Mode Settings ----------------
         self.settings_panel = QWidget(self.central_widget)
         self.settings_panel.setObjectName("settingsPanel")
-        self.settings_panel.setStyleSheet("QWidget#settingsPanel { background-color: rgba(25, 25, 25, 240); border: 2px solid #555555; border-radius: 15px; }")
+        self.settings_panel.setStyleSheet("QWidget#settingsPanel { background-color: #121212; border: 2px solid #555555; border-radius: 15px; }")
         self.settings_panel.setGeometry(int((UI_WIDTH-350)/2), 100, 350, 400)
         self.settings_panel.hide()
 
@@ -402,7 +402,7 @@ class RaspberryPiStereoSystem:
         # ---------------- Local Mode Settings ----------------
         self.local_settings_panel = QWidget(self.central_widget)
         self.local_settings_panel.setObjectName("localSettingsPanel")
-        self.local_settings_panel.setStyleSheet("QWidget#localSettingsPanel { background-color: rgba(25, 25, 25, 240); border: 2px solid #555555; border-radius: 15px; }")
+        self.local_settings_panel.setStyleSheet("QWidget#localSettingsPanel { background-color: #121212; border: 2px solid #555555; border-radius: 15px; }")
         self.local_settings_panel.setGeometry(int((UI_WIDTH-350)/2), 60, 350, 480)
         self.local_settings_panel.hide()
         
@@ -474,12 +474,12 @@ class RaspberryPiStereoSystem:
             
             lbl = QLabel(text, parent)
             lbl.setGeometry(25, y_pos - 3, 90, 20)
-            lbl.setStyleSheet("color: white; font-size: 10px; font-weight: bold; background: transparent;")
+            lbl.setStyleSheet("color: white; font-size: 12px; font-weight: bold; background: transparent;")
             return led
 
         # Panel for Capture/Calibration (Server Mode)
         self.status_panel_server = QWidget(self.central_widget)
-        self.status_panel_server.setGeometry(10, 45, 120, 110)
+        self.status_panel_server.setGeometry(3, 3, 105, 105)
         self.status_panel_server.setStyleSheet("background-color: transparent;")
         
         self.led_server = create_indicator(self.status_panel_server, 10, "Server Status")
@@ -490,7 +490,7 @@ class RaspberryPiStereoSystem:
 
         # Panel for Local Compute
         self.status_panel_local = QWidget(self.central_widget)
-        self.status_panel_local.setGeometry(10, 45, 120, 60)
+        self.status_panel_local.setGeometry(3, 3, 105, 60)
         self.status_panel_local.setStyleSheet("background-color: transparent;")
         
         self.led_local_capture = create_indicator(self.status_panel_local, 10, "Capturing")
@@ -514,8 +514,8 @@ class RaspberryPiStereoSystem:
         self.stereo_system.start()
         self.init_status_lights()
 
-        self.calibration_counter_label = QLabel(f"Calibration Images: {self.calibration_count}", parent=self.central_widget)
-        self.calibration_counter_label.setStyleSheet("background-color: rgba(43, 43, 43, 200); color: #ffffff; border: 2px solid #555555; border-radius: 10px; font-size: 20px; font-weight: bold;")
+        self.calibration_counter_label = QLabel(f"# of Calibration Images: {self.calibration_count}", parent=self.central_widget)
+        self.calibration_counter_label.setStyleSheet("background-color: #121212; color: #ffffff; border: 2px solid #555555; border-radius: 10px; font-size: 20px; font-weight: bold;")
         self.calibration_counter_label.setAlignment(Qt.AlignCenter)
         self.calibration_counter_label.setFixedSize(250, 50)
         self.calibration_counter_label.move(int((UI_WIDTH - 250) / 2), 20) 
@@ -548,7 +548,7 @@ class RaspberryPiStereoSystem:
         self.settings_button.setIcon(QIcon("UI/gear_icon.png"))
         self.settings_button.setIconSize(QSize(30, 30))
         self.settings_button.setFixedSize(50, 50)
-        self.settings_button.move(UI_WIDTH - 70, 45) 
+        self.settings_button.move(UI_WIDTH - 60, 15) 
         self.settings_button.hide() 
 
     def calibration_ui(self):
