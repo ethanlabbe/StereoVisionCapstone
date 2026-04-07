@@ -161,6 +161,15 @@ class RaspberryPiStereoSystem:
         if self.current_mode == 'calibration':
             self.calibration_count += 1
             self.signals.update_calib_count.emit(self.calibration_count)
+            if self.server.connected:
+                try:
+                    print(f"Queuing calibration image {current_id} to client...")
+                    self.server.send_images(imgL, imgR)
+                except Exception as e:
+                    print("Failed to queue images:", e)
+                    self.save_images_locally(imgL, imgR)
+            else:
+                self.save_images_locally(imgL, imgR)
             self.capture_button.show()
             
         elif self.current_mode == 'local':
@@ -285,10 +294,6 @@ class RaspberryPiStereoSystem:
         self.settings_button.show()
         self.capture_button.show()
         self.qpicamera2.show()
-
-    def change_fps(self):
-        print("Change FPS button clicked")
-
     def fake_quitting(self):
         self.current_mode = None
             
@@ -375,14 +380,7 @@ class RaspberryPiStereoSystem:
         self.ip_label.setStyleSheet(LBL_STYLE)
         self.ip_label.setAlignment(Qt.AlignCenter)
         self.ip_label.setFixedSize(250, 60)
-        self.ip_label.move(50, 20) 
-
-        self.fps_select = QPushButton(text="Change FPS", parent=self.settings_panel)
-        self.fps_select.clicked.connect(self.change_fps)
-        self.fps_select.setStyleSheet(BTN_STYLE)
-        self.fps_select.setFixedSize(250, 60)
-        self.fps_select.move(50, 100)
-
+        self.ip_label.move(50, 20)
         self.server_button = QPushButton(text="Start Server", parent=self.settings_panel)
         self.server_button.clicked.connect(self.toggle_server)
         self.server_button.setStyleSheet(BTN_STYLE)
@@ -395,11 +393,11 @@ class RaspberryPiStereoSystem:
         self.capture_quit_button.setFixedSize(150, 50)
         self.capture_quit_button.move(100, 260) 
 
-        self.close_settings_btn = QPushButton(text="Close Settings", parent=self.settings_panel)
+        self.close_settings_btn = QPushButton(text="X", parent=self.settings_panel)
         self.close_settings_btn.clicked.connect(self.toggle_settings)
         self.close_settings_btn.setStyleSheet(BTN_STYLE)
-        self.close_settings_btn.setFixedSize(150, 40)
-        self.close_settings_btn.move(100, 330)
+        self.close_settings_btn.setFixedSize(40, 40)
+        self.close_settings_btn.move(300, 10)
 
         # ---------------- Local Mode Settings ----------------
         self.local_settings_panel = QWidget(self.central_widget)
@@ -436,10 +434,10 @@ class RaspberryPiStereoSystem:
         self.local_quit_button.setStyleSheet(BTN_STYLE)
         self.local_quit_button.setGeometry(100, 330, 150, 50)
 
-        self.close_local_btn = QPushButton(text="Close Settings", parent=self.local_settings_panel)
+        self.close_local_btn = QPushButton(text="X", parent=self.local_settings_panel)
         self.close_local_btn.clicked.connect(self.toggle_local_settings)
         self.close_local_btn.setStyleSheet(BTN_STYLE)
-        self.close_local_btn.setGeometry(100, 400, 150, 40)
+        self.close_local_btn.setGeometry(300, 10, 40, 40)
 
     def toggle_settings(self):
         if self.settings_panel.isVisible():
