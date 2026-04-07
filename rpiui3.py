@@ -48,6 +48,8 @@ QComboBox QAbstractItemView {
 }
 """
 
+CALIBRATION_PARAMS_FILE = "calibration_parameters/calibration_params_60mm.npz"
+
 class TransmissionSignals(QObject):
     update_lights = pyqtSignal()
     update_calib_count = pyqtSignal(int)
@@ -65,7 +67,7 @@ class RaspberryPiStereoSystem:
         self.local_stereo = None
         self.local_stereo = StereoSystem(block_size=3, num_disp=16*15, wls_lambda=8000.0)
         try:
-            self.local_stereo.load_calibration_parameters("calibration_parameters/calibration_params_60mm.npz")
+            self.local_stereo.load_calibration_parameters(CALIBRATION_PARAMS_FILE)
         except Exception as e:
             print(f"No local calibration found: {e}")
 

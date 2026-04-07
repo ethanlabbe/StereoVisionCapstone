@@ -11,13 +11,13 @@ calibrating = False
 images_folder = "C:\\repos\\images\\testing"
 depth_folder = "depth"
 
-scales = [0.5, 1.0]
+scales = [0.5]
 
 
 for scale in scales:
     print(f"Processing images at scale: {scale}")
-    # with open(f"calibration_results_{scale}.csv", "w") as f:
-    #     f.write("Folder,Pairs_Found,Baseline_cm,Baseline_Error_Percent,Left_Reprojection_Error_px,Right_Reprojection_Error_px,Stereo_Reprojection_Error_px,Depth_RMSE_m,Spatial_Noise_m,Median_LR_Consistency_Error_px\n")
+    with open(f"calibration_results_{scale}.csv", "w") as f:
+        f.write("Folder,Pairs_Found,Baseline_cm,Baseline_Error_Percent,Left_Reprojection_Error_px,Right_Reprojection_Error_px,Stereo_Reprojection_Error_px,Depth_RMSE_m,Spatial_Noise_m,Median_LR_Consistency_Error_px\n")
 
     for folder in glob.glob(images_folder + "/*/"):
     #for folder in ["60mm", "65mm"]:
@@ -26,21 +26,26 @@ for scale in scales:
         folder_name = folder.split("\\")[-2]
         folder_depth = folder + "\\" + depth_folder + "\\"
         
-        if folder_name in  ["70mm", "45mm", "60mm", "65mm"]:
+        if folder_name in  ["45mm","60mm", "65mm"]:
             calib_left_images = sorted(glob.glob(folder + "left_image*.png"))
             calib_right_images = sorted(glob.glob(folder + "right_image*.png"))
             depth_img_L = cv2.imread(glob.glob(folder_depth + "left_image*.png")[0])
             depth_img_R = cv2.imread(glob.glob(folder_depth + "right_image*.png")[0])
-            
+            depth_img_L = cv2.resize(depth_img_L, (0, 0), fx=scale, fy=scale)
+            depth_img_R = cv2.resize(depth_img_R, (0, 0), fx=scale, fy=scale)
+        if folder_name in ["70mm"]:
+            calib_left_images = sorted(glob.glob(folder + "right_image*.png"))
+            calib_right_images = sorted(glob.glob(folder + "left_image*.png"))
+            depth_img_L = cv2.imread(glob.glob(folder_depth + "right_image*.png")[0])
+            depth_img_R = cv2.imread(glob.glob(folder_depth + "left_image*.png")[0])
         else:
             calib_right_images = sorted(glob.glob(folder + "left_image*.png"))
             calib_left_images = sorted(glob.glob(folder + "right_image*.png"))
             depth_img_R = cv2.imread(glob.glob(folder_depth + "left_image*.png")[0])
             depth_img_L = cv2.imread(glob.glob(folder_depth + "right_image*.png")[0])
+            depth_img_L = cv2.resize(depth_img_L, (0, 0), fx=scale, fy=scale)
+            depth_img_R = cv2.resize(depth_img_R, (0, 0), fx=scale, fy=scale)
         print(f"Processing folder: {folder_name}")
-
-        depth_img_L = cv2.resize(depth_img_L, (0, 0), fx=scale, fy=scale)
-        depth_img_R = cv2.resize(depth_img_R, (0, 0), fx=scale, fy=scale)
 
         if calibrating:
             # Add chessboard corners (only valid pairs)
@@ -82,14 +87,13 @@ for scale in scales:
         # Pass dispL directly - disparity_to_depth handles masking internally
         #dispL_filtered = stereo.postprocess_disparity(dispL)
         depth = stereo.disparity_to_depth(dispL)
-        stereo.visualize_depth_map(depth, title=f"Depth Map with scale {scale}",original_image=depth_img_L, vmax=1.5,save_folder=f"C:\\repos\\images\\testing\\{folder_name}\\depth_maps\\")
-        actual_depth = 0.6  # replace with actual depth if known for testing
-        roi_depth, roi_dispL, roi_dispR = get_roi(depth, dispL, dispR)
-        rmse = depth_rmse(roi_depth, actual_depth)
-        noise = spatial_noise(roi_depth)
-        lr = median_lr_consistency_error(roi_dispL, roi_dispR)
-        print(f"Depth RMSE: {rmse:.4f} m, Spatial Noise: {noise:.4f} m, Median LR Consistency Error: {lr:.2f} pixels")
-
-        
+        stereo.visualize_depth_map(depth, title=f"Depth Map with scale {scale}")
+        actual_depth = input("Enter actual depth for performance metrics (or press Enter to skip): ")
+        if actual_depth:
+            roi_depth, roi_dispL, roi_dispR = get_roi(depth, dispL, dispR)
+            rmse = depth_rmse(roi_depth, actual_depth)
+            noise = spatial_noise(roi_depth)
+            lr = median_lr_consistency_error(roi_dispL, roi_dispR)
+            print(f"Depth RMSE: {rmse*1000:.4f} mm, Spatial Noise: {noise*1000:.4f} mm, Median LR Consistency Error: {lr:.2f} pixels")
         # with open(f"calibration_results_{scale}.csv", "a") as f:
         #     f.write(f"{folder_name},{valid_pairs},{baseline*100:.2f},{baseline_error*100:.2f},{stereo.retL:.2f},{stereo.retR:.2f},{stereo.stereo_ret:.2f},{rmse:.4f},{noise:.4f},{lr:.2f}\n")

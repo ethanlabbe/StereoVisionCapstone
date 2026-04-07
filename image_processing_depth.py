@@ -69,4 +69,4 @@ for depth_L_path in sorted(glob.glob(f"{depth_folder}\\left_image_*.png")):
         lr = median_lr_consistency_error(roi_dispL, roi_dispR)
         print(f"Depth RMSE: {rmse*1000:.4f} mm, Spatial Noise: {noise*1000:.4f} mm, Median LR Consistency Error: {lr:.2f} pixels")
         with open(f"validation_results.csv", "a") as f:
-            f.write(f"70,{rmse*1000:.4f},{noise*1000:.4f},{lr:.2f}\n")
+            f.write(f"{1.0 / stereo.Q[3, 2]*100:.2f}, {actual_depth} {rmse*1000:.4f},{noise*1000:.4f},{lr:.2f}\n")

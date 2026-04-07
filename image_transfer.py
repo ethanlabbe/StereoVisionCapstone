@@ -274,9 +274,17 @@ if __name__ == "__main__":
                         #load files from popup dialog to send
                         import cv2
                         import numpy as np
-                        left_path = "C:\\repos\\images\\received_depth\\60mm_depth\\left_image_1048612150715100.png"
-                        right_path = "C:\\repos\\images\\received_depth\\60mm_depth\\right_image_1048612150715100.png"
-                        # Read with OpenCV (BGR)
+                        #open file dialog to select left and right images
+                        from tkinter import Tk
+                        from tkinter import filedialog
+                        # root = Tk()
+                        # root.withdraw()  # Hide the root window
+                        # left_path = filedialog.askopenfilename(title="Select left image")
+                        # right_path = left_path.replace("left", "right")  # Assume right image has same name with "right" instead of "left"
+                        # # Read with OpenCV (BGR)
+                        left_path = "C:\\repos\\images\\faces\\received_depth\\left_image_1775519448809.png"
+                        right_path = "C:\\repos\\images\\faces\\received_depth\\right_image_1775519448809.png"
+
                         left_img = cv2.imread(left_path, cv2.IMREAD_UNCHANGED)
                         right_img = cv2.imread(right_path, cv2.IMREAD_UNCHANGED)
                         # Ensure both are 4 channels (BGRA)

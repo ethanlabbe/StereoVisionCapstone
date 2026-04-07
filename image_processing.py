@@ -8,15 +8,15 @@ from performance import depth_rmse, spatial_noise, median_lr_consistency_error, 
 
 stereo = StereoSystem(block_size=5, num_disp=16*20, wls_lambda=1000)
 calibrating = False
-calib_file_path = "calib_60mm_0.5.npz"
+calib_file_path = "calibration_params_60mm.npz"
 # scale_factor = 0.5
 
 
-calib_right_images = sorted(glob.glob("C:\\repos\\images\\received_calibration\\60mm\\left_image*.png"))
-calib_left_images = sorted(glob.glob("C:\\repos\\images\\received_calibration\\60mm\\right_image*.png"))
+calib_left_images = sorted(glob.glob("C:\\repos\\images\\received_calibration\\60mm\\left_image*.png"))
+calib_right_images = sorted(glob.glob("C:\\repos\\images\\received_calibration\\60mm\\right_image*.png"))
 
-depth_img_L = cv2.imread("C:\\repos\\images\\received_depth\\60mm_depth\\left_image_1048612150715100.png")
-depth_img_R = cv2.imread("C:\\repos\\images\\received_depth\\60mm_depth\\right_image_1048612150715100.png")
+depth_img_L = cv2.imread("C:\\repos\\images\\received_depth\\60mm_depth\\left_image_1051426249462200_705mm.png")
+depth_img_R = cv2.imread("C:\\repos\\images\\received_depth\\60mm_depth\\right_image_1051426249462200_705mm.png")
 
 # depth_img_L = cv2.resize(depth_img_L, (0, 0), fx=scale_factor, fy=scale_factor)
 # depth_img_R = cv2.resize(depth_img_R, (0, 0), fx=scale_factor, fy=scale_factor)
@@ -27,7 +27,7 @@ if calibrating:
     for l_path, r_path in zip(calib_left_images, calib_right_images):
         left_img = cv2.imread(l_path)
         right_img = cv2.imread(r_path)
-        retl, cornersL, retR, cornersR = stereo.find_calibration_corners(left_img, right_img, display=True)
+        retl, cornersL, retR, cornersR = stereo.find_calibration_corners(left_img, right_img, display=False)
         if not (retl and retR):
             print(f"Failed to find corners in pair {l_path} and {r_path}")
         else:
@@ -41,7 +41,7 @@ if calibrating:
     stereo.save_calibration_parameters(calib_file_path)
     # Print baseline from Q matrix
     baseline = 1.0 / stereo.Q[3, 2]
-    actual_baseline = 0.07  # replace with actual measured baseline in meters
+    actual_baseline = 0.06  # replace with actual measured baseline in meters
     baseline_error = abs(baseline - actual_baseline) / actual_baseline
     
     print(f"Baseline: {baseline*100:.2f} centimeters")
@@ -55,11 +55,14 @@ else:
 
 # depth_img_L, depth_img_R = stereo.preprocess_images(depth_img_L, depth_img_R)
 rectified_L, rectified_R = stereo.rectify_pair(depth_img_L, depth_img_R)
-dispL, dispL2, dispR = stereo.compute_disparity(rectified_L, rectified_R)
+dispL, dispL2, dispR, dispR2 = stereo.compute_disparity(rectified_L, rectified_R)
 # Pass dispL directly - disparity_to_depth handles masking internally
 #dispL_filtered = stereo.postprocess_disparity(dispL)
-depth = stereo.disparity_to_depth(dispL)
-stereo.visualize_depth_map(depth, title="Depth Map")
+depthL = stereo.disparity_to_depth(dispL)
+depthR = stereo.disparity_to_depth(-dispR)
+stereo.visualize_depth_map(depthL, title="Depth Map Left")
+stereo.visualize_depth_map(depthR, title="Depth Map Right")
+
 actual_depth = input("Enter actual depth for performance metrics (or press Enter to skip): ")
 if actual_depth:
     roi_depth, roi_dispL, roi_dispR = get_roi(depth, dispL, dispR)

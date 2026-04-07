@@ -492,16 +492,16 @@ class StereoApp:
         
         gradient = np.linspace(255, 0, cb_h, dtype=np.uint8)
         gradient = np.tile(gradient, (cb_w, 1)).T
-        gradient_col = cv2.applyColorMap(gradient, cv2.COLORMAP_JET)
+        gradient_col = cv2.applyColorMap(gradient, cv2.COLORMAP_HSV)
         
         image[cb_y:cb_y+cb_h, cb_x:cb_x+cb_w] = gradient_col
         cv2.rectangle(image, (cb_x, cb_y), (cb_x + cb_w, cb_y + cb_h), (255, 255, 255), 1)
 
-        font, scale, thick = cv2.FONT_HERSHEY_SIMPLEX, 0.6, 2
-        for val, y_pos in [(vmax_val, cb_y + 15), (vmin_val, cb_y + cb_h)]:
+        font, scale, thick = cv2.FONT_HERSHEY_SIMPLEX, 1.25, 2
+        for val, y_pos in [(vmax_val, cb_y - 15), (vmin_val, cb_y + 35 + cb_h)]:
             text = f"{val:.2f}m"
-            cv2.putText(image, text, (cb_x - 70, y_pos), font, scale, (0, 0, 0), thick + 1)
-            cv2.putText(image, text, (cb_x - 70, y_pos), font, scale, (255, 255, 255), 1)
+            cv2.putText(image, text, (cb_x - 65, y_pos), font, scale, (0, 0, 0), thick + 2)
+            cv2.putText(image, text, (cb_x - 65, y_pos), font, scale, (255, 255, 255), thick)
 
     def on_hover(self, event, view_id):
         # Fix: Safely check if current depth map exists before attempting shape operations
@@ -660,10 +660,13 @@ class StereoApp:
                             imgL_disp = self.current_images["left"].copy()
                             imgR_disp = self.current_images["right"].copy()
                             
-                            pattern_size = getattr(self.device.stereo, 'checkerboard_size', getattr(self.device.stereo, 'pattern_size', None))
+                            pattern_size = getattr(self.device.stereo, 'chessboard_size')
+                            print(f"Pattern size for corner drawing: {pattern_size}")
                             if retL:
+                                print("drawing corners on left image")
                                 cv2.drawChessboardCorners(imgL_disp, pattern_size, cornersL, retL)
                             if retR:
+                                print("drawing corners on right image")
                                 cv2.drawChessboardCorners(imgR_disp, pattern_size, cornersR, retR)
                                 
                             self.current_images["left"] = imgL_disp
@@ -782,7 +785,7 @@ class StereoApp:
 
 
 if __name__ == "__main__":
-    device = StereoClientDevice(server_host='192.168.1.105', calibrating=False, calibraton_params_file="calibration_params_60mm.npz")
+    device = StereoClientDevice(server_host='localhost', calibrating=False, calibraton_params_file="calibration_params_60mm.npz")
     root = tk.Tk()
     app = StereoApp(root, device)
 

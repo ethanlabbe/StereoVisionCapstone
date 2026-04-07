@@ -26,7 +26,7 @@ def get_roi(predicted_depth, dispL=None, dispR=None):
     cv2.destroyAllWindows()
     
     x, y, w, h = roi
-
+    print(f"Selected ROI - x: {x}, y: {y}, width: {w}, height: {h}")
     if w > 0 and h > 0:
         # Slice the raw depth map and disparities using the visual coordinates
         roi_depth = predicted_depth[y:y+h, x:x+w]
