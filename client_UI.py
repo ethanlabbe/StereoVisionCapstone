@@ -545,7 +545,9 @@ class StereoApp:
 
     def toggle_connection(self):
         if not self.is_running:
-            self.device.client.host = self.ip_var.get()
+            new_ip = self.ip_var.get()
+            self.device.server_host = new_ip
+            self.device.client = ImageClient(new_ip, self.device.server_port)
             
             self.connect_btn.config(state=tk.DISABLED, text="Connecting...")
             self.ip_entry.config(state=tk.DISABLED) 
