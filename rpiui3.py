@@ -627,7 +627,8 @@ class RaspberryPiStereoSystem:
         self.app = QApplication(sys.argv)
         rpiUI= QMainWindow()
         rpiUI.setWindowTitle("Stereo Vision Capstone")
-        rpiUI.setGeometry(0, 0, UI_WIDTH, UI_HEIGHT)
+        #rpiUI.setGeometry(0, 0, UI_WIDTH, UI_HEIGHT)
+        rpiUI.showFullScreen()
 
         self.central_widget = QWidget()
         self.central_widget.setStyleSheet("background-color: #121212;")
@@ -675,7 +676,7 @@ class RaspberryPiStereoSystem:
         self.status_timer.timeout.connect(self.emit_lights_update)
         self.status_timer.start(1000)
 
-        rpiUI.show()
+       #rpiUI.show()
         self.app.exec()
 
 if __name__ == "__main__":
