@@ -55,13 +55,12 @@ else:
 
 # depth_img_L, depth_img_R = stereo.preprocess_images(depth_img_L, depth_img_R)
 rectified_L, rectified_R = stereo.rectify_pair(depth_img_L, depth_img_R)
-dispL, dispL2, dispR, dispR2 = stereo.compute_disparity(rectified_L, rectified_R)
+dispL, dispL2, dispR = stereo.compute_disparity(rectified_L, rectified_R)
 # Pass dispL directly - disparity_to_depth handles masking internally
 #dispL_filtered = stereo.postprocess_disparity(dispL)
-depthL = stereo.disparity_to_depth(dispL)
-depthR = stereo.disparity_to_depth(-dispR)
-stereo.visualize_depth_map(depthL, title="Depth Map Left")
-stereo.visualize_depth_map(depthR, title="Depth Map Right")
+depth = stereo.disparity_to_depth(dispL)
+stereo.visualize_depth_map(depth, title="Depth Map ")
+
 
 actual_depth = input("Enter actual depth for performance metrics (or press Enter to skip): ")
 if actual_depth:

@@ -206,15 +206,13 @@ class StereoSystem:
 
         # Correct Python signature: filter(disparity_left, left_view, disparity_right)
         dispL_filt_16 = wls.filter(dispL_16, imgL, disparity_map_right=dispR_16)
-        dispR_filt_16 = wls.filter(dispR_16, imgR, disparity_map_right=dispL_16)
 
         # Convert AFTER filtering
         dispL_filtered = dispL_filt_16.astype(np.float32) / 16.0
-        dispR_filtered = dispR_filt_16.astype(np.float32) / 16.0
         dispL = dispL_16.astype(np.float32) / 16.0
         dispR = dispR_16.astype(np.float32) / 16.0
 
-        return dispL_filtered, dispL, dispR_filtered, dispR
+        return dispL_filtered, dispL, dispR
 
     def postprocess_disparity(self, disparity, median_ksize=5, inpaint_radius=10):
         disp = disparity.copy()
