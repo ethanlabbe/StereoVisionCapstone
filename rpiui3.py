@@ -373,31 +373,32 @@ class RaspberryPiStereoSystem:
         self.settings_panel = QWidget(self.central_widget)
         self.settings_panel.setObjectName("settingsPanel")
         self.settings_panel.setStyleSheet("QWidget#settingsPanel { background-color: #121212; border: 2px solid #555555; border-radius: 15px; }")
-        self.settings_panel.setGeometry(int((UI_WIDTH-350)/2), 100, 350, 400)
+        self.settings_panel.setGeometry(int((UI_WIDTH-350)/2), 100, 350, 300)
         self.settings_panel.hide()
 
         self.ip_label = QLabel(f"IP: {self.ipaddress}", parent=self.settings_panel)
         self.ip_label.setStyleSheet(LBL_STYLE)
         self.ip_label.setAlignment(Qt.AlignCenter)
         self.ip_label.setFixedSize(250, 60)
-        self.ip_label.move(50, 20)
+        self.ip_label.move(50, 40)
+        
         self.server_button = QPushButton(text="Start Server", parent=self.settings_panel)
         self.server_button.clicked.connect(self.toggle_server)
         self.server_button.setStyleSheet(BTN_STYLE)
         self.server_button.setFixedSize(250, 60)
-        self.server_button.move(50, 180) 
+        self.server_button.move(50, 130) 
 
         self.capture_quit_button = QPushButton(text="Back to Start", parent=self.settings_panel)
         self.capture_quit_button.clicked.connect(self.fake_quitting)
         self.capture_quit_button.setStyleSheet(BTN_STYLE)
         self.capture_quit_button.setFixedSize(150, 50)
-        self.capture_quit_button.move(100, 260) 
+        self.capture_quit_button.move(100, 220) 
 
         self.close_settings_btn = QPushButton(text="X", parent=self.settings_panel)
         self.close_settings_btn.clicked.connect(self.toggle_settings)
         self.close_settings_btn.setStyleSheet(BTN_STYLE)
-        self.close_settings_btn.setFixedSize(40, 40)
-        self.close_settings_btn.move(300, 10)
+        self.close_settings_btn.setFixedSize(30, 30)
+        self.close_settings_btn.move(310, 10)
 
         # ---------------- Local Mode Settings ----------------
         self.local_settings_panel = QWidget(self.central_widget)
@@ -539,7 +540,7 @@ class RaspberryPiStereoSystem:
         self.settings_button.clicked.connect(self.toggle_active_settings)
         self.settings_button.setStyleSheet("""
         QPushButton {
-            background-color: #2b2b2b; border: 2px solid #555555; border-radius: 25px;
+            background-color: #121212; border: 2px solid #555555; border-radius: 25px;
         }
         QPushButton:pressed {
             background-color: #555555; border: 2px solid #ffffff;
