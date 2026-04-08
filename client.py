@@ -16,7 +16,7 @@ except ImportError:
     HAS_SV_TTK = False
 
 from image_transfer import ImageClient
-from stereo_class_ethan import StereoSystem
+from stereo_class import StereoSystem
 from performance import depth_rmse, spatial_noise, median_lr_consistency_error, get_roi
 
 class StereoClientDevice:
@@ -462,7 +462,7 @@ class StereoApp:
             clipped_valid = np.clip(depth[valid_mask], vmin_val, vmax_val)
             norm_depth[valid_mask] = ((clipped_valid - vmin_val) / (vmax_val - vmin_val) * 255).astype(np.uint8)
             
-        depth_color = cv2.applyColorMap(norm_depth, cv2.COLORMAP_JET)
+        depth_color = cv2.applyColorMap(norm_depth, cv2.COLORMAP_TURBO)
         depth_color[~valid_mask] = [0, 0, 0] 
         
         self.draw_colorbar(depth_color, vmin_val, vmax_val)
@@ -492,7 +492,7 @@ class StereoApp:
         
         gradient = np.linspace(255, 0, cb_h, dtype=np.uint8)
         gradient = np.tile(gradient, (cb_w, 1)).T
-        gradient_col = cv2.applyColorMap(gradient, cv2.COLORMAP_HSV)
+        gradient_col = cv2.applyColorMap(gradient, cv2.COLORMAP_TURBO)
         
         image[cb_y:cb_y+cb_h, cb_x:cb_x+cb_w] = gradient_col
         cv2.rectangle(image, (cb_x, cb_y), (cb_x + cb_w, cb_y + cb_h), (255, 255, 255), 1)
@@ -787,7 +787,7 @@ class StereoApp:
 
 
 if __name__ == "__main__":
-    device = StereoClientDevice(server_host='localhost', calibrating=False, calibraton_params_file="calibration_params_60mm.npz")
+    device = StereoClientDevice(server_host='192.168.137.79', calibrating=False, calibraton_params_file="calibration_parameters/calibration_params_60mm.npz")
     root = tk.Tk()
     app = StereoApp(root, device)
 

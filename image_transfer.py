@@ -282,8 +282,8 @@ if __name__ == "__main__":
                         # left_path = filedialog.askopenfilename(title="Select left image")
                         # right_path = left_path.replace("left", "right")  # Assume right image has same name with "right" instead of "left"
                         # # Read with OpenCV (BGR)
-                        left_path = "C:\\repos\\images\\faces\\received_depth\\left_image_1775519448809.png"
-                        right_path = "C:\\repos\\images\\faces\\received_depth\\right_image_1775519448809.png"
+                        left_path = "C:\\repos\\images\\faces\\received_depth\\left_image_1775605130818.png"
+                        right_path = "C:\\repos\\images\\faces\\received_depth\\right_image_1775605130818.png"
 
                         left_img = cv2.imread(left_path, cv2.IMREAD_UNCHANGED)
                         right_img = cv2.imread(right_path, cv2.IMREAD_UNCHANGED)

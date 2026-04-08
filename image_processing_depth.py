@@ -2,13 +2,13 @@ import cv2
 import numpy as np
 import glob
 import matplotlib.pyplot as plt
-from stereo_class_ethan import StereoSystem
+from stereo_class import StereoSystem
 from performance import depth_rmse, spatial_noise, median_lr_consistency_error, get_roi
 #from stereo_class import StereoSystem, CameraCalibration
 
 stereo = StereoSystem(block_size=5, num_disp=16*20)
 calibrating = False
-calib_file_path = "calib_60mm_0.5.npz"
+calib_file_path = "calibration_parameters/calibration_params_60mm.npz"
 
 calib_left_images = sorted(glob.glob("C:\\repos\\images\\received_calibration\\60mm\\left_image*.png"))
 calib_right_images = sorted(glob.glob("C:\\repos\\images\\received_calibration\\60mm\\right_image*.png"))
@@ -60,7 +60,7 @@ for depth_L_path in sorted(glob.glob(f"{depth_folder}\\left_image_*.png")):
     #dispL_filtered = stereo.postprocess_disparity(dispL)
     depth = stereo.disparity_to_depth(dispL)
     image_title = depth_L_path.split("\\")[-1].replace(".png", "")
-    stereo.visualize_depth_map(depth, original_image=depth_img_L,title=f"Depth Image {image_title}", vmin = 0.3,vmax= 1.5)
+    stereo.visualize_depth_map(depth, original_image=depth_img_L,title=f"Depth Image {image_title}")
     actual_depth = input("Enter actual depth for performance metrics (or press Enter to skip): ")
     if actual_depth:
         roi_depth, roi_dispL, roi_dispR = get_roi(depth, dispL, dispR)
@@ -69,4 +69,4 @@ for depth_L_path in sorted(glob.glob(f"{depth_folder}\\left_image_*.png")):
         lr = median_lr_consistency_error(roi_dispL, roi_dispR)
         print(f"Depth RMSE: {rmse*1000:.4f} mm, Spatial Noise: {noise*1000:.4f} mm, Median LR Consistency Error: {lr:.2f} pixels")
         with open(f"validation_results.csv", "a") as f:
-            f.write(f"{1.0 / stereo.Q[3, 2]*100:.2f}, {actual_depth} {rmse*1000:.4f},{noise*1000:.4f},{lr:.2f}\n")
+            f.write(f"{1.0 / stereo.Q[3, 2]*100:.2f}, {actual_depth}, {rmse*1000:.4f},{noise*1000:.4f},{lr:.2f}\n")

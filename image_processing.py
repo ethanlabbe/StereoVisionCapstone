@@ -2,7 +2,7 @@ import cv2
 import numpy as np
 import glob
 import matplotlib.pyplot as plt
-from stereo_class_ethan import StereoSystem
+from stereo_class import StereoSystem
 from performance import depth_rmse, spatial_noise, median_lr_consistency_error, get_roi
 #from stereo_class import StereoSystem, CameraCalibration
 

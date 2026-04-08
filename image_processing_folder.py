@@ -2,7 +2,7 @@ import cv2
 import numpy as np
 import glob
 import matplotlib.pyplot as plt
-from stereo_class_ethan import StereoSystem
+from stereo_class import StereoSystem
 from performance import depth_rmse, spatial_noise, median_lr_consistency_error, get_roi
 #from stereo_class import StereoSystem, CameraCalibration
 
@@ -79,7 +79,7 @@ for scale in scales:
             print(f"Right reprojection error: {stereo.retR:.2f}px")
             print(f"Stereo reprojection error: {stereo.stereo_ret:.2f}px")
         else:
-            stereo.load_calibration_parameters(f"test_calib_{folder_name}_{scale}.npz")
+            stereo.load_calibration_parameters(f"calibration_parameters/test_calib_{folder_name}_{scale}.npz")
 
         # depth_img_L, depth_img_R = stereo.preprocess_images(depth_img_L, depth_img_R)
         rectified_L, rectified_R = stereo.rectify_pair(depth_img_L, depth_img_R)
