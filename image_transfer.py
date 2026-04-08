@@ -3,7 +3,6 @@ import threading
 import struct
 import time
 import sys
-import datetime
 import queue
 
 class ImageServerHost:
