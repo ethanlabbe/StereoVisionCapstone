@@ -4,7 +4,6 @@ import glob
 import matplotlib.pyplot as plt
 from stereo_class import StereoSystem
 from performance import depth_rmse, spatial_noise, median_lr_consistency_error, get_roi
-#from stereo_class import StereoSystem, CameraCalibration
 
 stereo = StereoSystem()
 calibrating = False

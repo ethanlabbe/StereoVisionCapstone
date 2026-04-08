@@ -31,10 +31,9 @@ class StereoSystem:
 
         self.window_size = window_size
         self.min_disp = min_disp
-        self.num_disp = num_disp  # Must be divisible by 16
+        self.num_disp = num_disp 
         self.wls_lambda = wls_lambda
 
-        # Improved defaults for SGBM
         if p1 is None:
             p1 = 8 * 3 * window_size ** 2
         if p2 is None:

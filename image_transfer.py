@@ -8,7 +8,7 @@ import queue
 class ImageServerHost:
     """Non-blocking image server that accepts a single client and sends images
     on demand via `send_images(left_bytes, right_bytes=None)`.
-    Images are sent as a 4-byte big-endian length prefix followed by payload.
+    Images are sent as a 4-byte header prefix followed by image payload.
     """
     def __init__(self, host='localhost', port=8080):
         self.host = host
@@ -190,13 +190,11 @@ class ImageServerHost:
 
 class ImageClient:
     """Client that connects and receives length-prefixed images.
-    It will save each image it receives as received_image_<n>.jpg.
     """
-    def __init__(self, server_host='localhost', server_port=8080, save_images = True):
+    def __init__(self, server_host='localhost', server_port=8080):
         self.sock = None
         self.server_host = server_host
         self.server_port = server_port
-        self.save_images = save_images
         self.connected = False
         
     def _recv_all(self, n):
@@ -248,11 +246,13 @@ class ImageClient:
         except Exception:
             self.connected = False
             pass
-        
+
+
+#CODE FOR DEBUG        
 if __name__ == "__main__":
     user_input = input("Start as server (s) or client (c)? ")
     if user_input.lower() == 'c':
-        client = ImageClient(server_host='localhost', server_port=8080, save_images=True)
+        client = ImageClient(server_host='localhost', server_port=8080)
         client.connect()
         try:
             while True:

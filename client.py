@@ -17,7 +17,7 @@ except ImportError:
 
 from image_transfer import ImageClient
 from stereo_class import StereoSystem
-from performance import depth_rmse, spatial_noise, median_lr_consistency_error, get_roi
+from performance import depth_rmse, spatial_noise, median_lr_consistency_error
 
 class StereoClientDevice:
     def __init__(self, server_host='localhost', server_port=8080, calibrating=False, calibraton_params_file="calibration_params.npz"):

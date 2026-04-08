@@ -1,10 +1,8 @@
 from picamera2 import Picamera2, Preview
 from libcamera import controls, Transform
 import cv2
-import time
 import datetime
 import json
-import os
 
 RIGHT_CAMERA_ID = '/base/axi/pcie@1000120000/rp1/i2c@88000/imx500@1a'
 LEFT_CAMERA_ID = '/base/axi/pcie@1000120000/rp1/i2c@80000/imx500@1a'
@@ -38,7 +36,6 @@ class StereoCameraAcquisition:
     def start(self):
         self.left_camera.start()
         self.right_camera.start()
-#        time.sleep(2)  # Allow cameras to warm up
         
     def initialize_cameras(self):
         self.stop()
@@ -62,7 +59,6 @@ class StereoCameraAcquisition:
         Returns integer nanoseconds or None if unavailable.
         """
         try:
-            # Picamera2/libcamera may expose metadata via get_metadata()
             meta = None
             if hasattr(req, 'get_metadata'):
                 meta = req.get_metadata()
@@ -99,7 +95,7 @@ class StereoCameraAcquisition:
         self.right_camera.stop()
         
     
-
+#CODE FOR DEBUGGING
 if __name__ == "__main__":
     stereo_system = StereoCameraAcquisition()
     input("Press Enter to initialize cameras...")
