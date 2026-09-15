@@ -1,8 +1,0 @@
-Folder,Pairs_Found,Baseline_cm,Baseline_Error_Percent,Left_Reprojection_Error_px,Right_Reprojection_Error_px,Stereo_Reprojection_Error_px,Depth_RMSE_m,Spatial_Noise_m,Median_LR_Consistency_Error_px
-30mm,39,3.29,9.65,5.64,5.36,5.64,nan,nan,319
-35mm,40,3.06,12.52,5.84,5.9,5.98,4.1555,3.389,319
-40mm,40,3.89,2.77,5.81,5.57,5.78,2.5423,2.0299,319
-45mm,41,4.37,2.96,5.63,5.62,5.71,5.6476,4.7408,319
-50mm,40,4.92,1.63,5.11,5.15,5.21,0.4689,0.4676,319
-55mm,40,5.52,0.32,5.81,5.64,5.8,2.1741,2.137,319
-70mm,32,7.77,10.99,3.98,4.36,4.31,10.1592,6.8979,319
